@@ -38,9 +38,27 @@ struct OnboardingContainerView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let dotIndex = step.dotIndex {
-                PlacementProgressDots(total: OnboardingStep.dotCount, currentIndex: dotIndex)
-                    .padding(.top, Theme.Spacing.lg)
-                    .padding(.bottom, Theme.Spacing.md)
+                ZStack {
+                    PlacementProgressDots(total: OnboardingStep.dotCount, currentIndex: dotIndex)
+
+                    if canGoBack {
+                        HStack {
+                            Button {
+                                goBack()
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(Theme.Colors.ink)
+                                    .frame(width: 44, height: 44)
+                            }
+                            .accessibilityLabel("Back")
+                            Spacer()
+                        }
+                        .padding(.leading, Theme.Spacing.sm)
+                    }
+                }
+                .padding(.top, Theme.Spacing.lg)
+                .padding(.bottom, Theme.Spacing.md)
             }
 
             Group {
@@ -88,9 +106,21 @@ struct OnboardingContainerView: View {
         })
     }
 
+    /// No back nav on Welcome (nothing before it) or FirstMessage (a real
+    /// /v1/chat call may already have fired — going back would be confusing).
+    private var canGoBack: Bool {
+        step != .welcome && step != .firstMessage
+    }
+
     private func advance() {
         guard let next = OnboardingStep(rawValue: step.rawValue + 1) else { return }
         withAnimation(Theme.Motion.spring) { step = next }
+    }
+
+    private func goBack() {
+        guard let previous = OnboardingStep(rawValue: step.rawValue - 1) else { return }
+        Theme.Haptic.chipTap()
+        withAnimation(Theme.Motion.spring) { step = previous }
     }
 
     private func finishOnboarding() {
