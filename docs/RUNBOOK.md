@@ -1,6 +1,32 @@
 # RUNBOOK.md — ops reference
 
-> Updated as each node stands up (CLAUDE.md §15). M0 status below.
+> Updated as each node stands up (CLAUDE.md §15). Keep this current at the end of every milestone — a new session should be able to read this file top to bottom and know exactly where things stand without re-deriving anything from git log.
+
+## Resume here (session continuity)
+
+**Where we are:** M0 and M1 done and committed. M2's Worker/backend half (device auth, profile CRUD) is done; the iOS half (Theme.swift, onboarding UI) is **not started** — it needs the Xcode `app/` project, which doesn't exist on this Linux box (see `SETUP.md` Part B — that's a Mac-side, human step). See the Milestone log at the bottom for full per-milestone detail.
+
+**Live processes on this box (`trading-ryzen`) right now:**
+- `fluent-gateway.service` (systemd, `Restart=always`) — the inference gateway, bound to `127.0.0.1:8000`. Check with `systemctl is-active fluent-gateway.service`.
+- A manually-started `cloudflared tunnel --url http://localhost:8000 --protocol http2` background process exposing it at a `*.trycloudflare.com` URL. This is **not** systemd-managed and the URL **changes every time it's restarted** — check `ps aux | grep "cloudflared tunnel"`; if it's not running, restart it and grep its stdout log for the new URL, then update `GATEWAY_URL` in `infra/.dev.vars` (not `worker/.dev.vars` — `.dev.vars` location is relative to the `--config` file's directory; see the Secrets section gotcha below).
+- **Process management gotcha:** `pkill -f "wrangler dev"` (and similar pattern-matched kills) have intermittently aborted the whole calling shell in this environment (observed exit code 144) instead of just killing the target. Prefer `ps aux | grep <name>` then `kill -9 <explicit pid>` for anything backgrounded here.
+
+**Things a fresh session needs to know before touching infra:**
+- `blockedordown.com` is an existing, unrelated Cloudflare zone on this account — **do not create DNS records, WAF rules, or tunnels against it.** (We tried once for the gateway tunnel, it fought back with bot protection, we abandoned and cleaned it up — see M1 log below.) Fluent has no production domain yet; that's a prerequisite for a stable tunnel, tracked as a TODO.
+- `infra/wrangler.toml`'s committed `GATEWAY_URL` is a deliberately unroutable placeholder (`gateway.fluent.example.com`) so `worker`'s test suite has no live-network dependency. Never replace it with a real tunnel URL in a commit — override locally via `infra/.dev.vars` instead.
+- No secrets are ever committed. `gateway/.env`, `infra/.dev.vars`, and the Cloudflare API token are all local-only / gitignored / never persisted to disk by the agent (see Secrets table below).
+- This is a Linux box with no Xcode — the iOS `app/` directory does not exist in this repo yet. It gets created on the user's Mac per `SETUP.md` Part B and shares this same repo. Backend-only milestones (M0, M1, M5 batch, worker halves of M2-M4) can proceed here; SwiftUI work cannot.
+
+**Quick health check when resuming:**
+```bash
+systemctl is-active fluent-gateway.service          # should be "active"
+curl -s http://localhost:8000/healthz                # should be {"status":"ok","ollama":true}
+ps aux | grep "cloudflared tunnel" | grep -v grep    # confirm quick tunnel still running, note its URL from its log
+cd /srv/bots/Fluent/worker && npx vitest run          # should be all green
+cd /srv/bots/Fluent/gateway && .venv/bin/pytest -q    # should be all green
+cd /srv/bots/Fluent/shared && npx vitest run          # should be all green
+git -C /srv/bots/Fluent log --oneline                 # see exactly what's committed so far
+```
 
 ## Cloudflare resources
 
@@ -17,12 +43,14 @@ Account auth: a Cloudflare API token (Edit Cloudflare Workers template + Account
 
 ## Secrets
 
-Set via `wrangler secret put <NAME> --config infra/wrangler.toml` (production) or `worker/.dev.vars` (local, gitignored — copy `worker/.dev.vars.example`).
+Set via `wrangler secret put <NAME> --config infra/wrangler.toml` (production) or `infra/.dev.vars` (local, gitignored — copy `infra/.dev.vars.example`).
+
+**Important gotcha (cost real debugging time in M2): `.dev.vars` location is relative to the `--config` file's directory, not your cwd.** Since `wrangler dev` / the vitest test pool are always invoked with `--config ../infra/wrangler.toml`, the file must be `infra/.dev.vars` — a `worker/.dev.vars` is silently ignored (wrangler won't error, it just won't load it). The vitest suite doesn't read `.dev.vars` at all; its dummy `TOKEN_SIGNING_KEY`/`GATEWAY_SHARED_SECRET` are hardcoded directly in `worker/vitest.config.ts`'s `miniflare.bindings`.
 
 | Secret | Used by | Status |
 |---|---|---|
-| `GATEWAY_SHARED_SECRET` | Worker -> gateway auth | **set.** Generated with `openssl rand -hex 32`, lives in `gateway/.env` (chmod 600, gitignored) on the home server. Not yet pushed to the Worker's production secret store — run `wrangler secret put GATEWAY_SHARED_SECRET --config infra/wrangler.toml` with the same value before deploying. |
-| `TOKEN_SIGNING_KEY` | Worker bearer tokens | not set — needed in M2 |
+| `GATEWAY_SHARED_SECRET` | Worker -> gateway auth | **set**, matching value in both `gateway/.env` (home server, chmod 600) and `infra/.dev.vars` (local worker dev, gitignored). Not yet pushed to the Worker's production secret store — run `wrangler secret put GATEWAY_SHARED_SECRET --config infra/wrangler.toml` before deploying. |
+| `TOKEN_SIGNING_KEY` | Worker bearer tokens (HMAC-SHA256 signing, CLAUDE.md §12) | **set locally** (`openssl rand -hex 32`, in `infra/.dev.vars`, gitignored). Not yet pushed to production — same `wrangler secret put` step as above before deploying. |
 | Cloudflare API token | batch pipeline (Hetzner) | not persisted anywhere; export fresh when needed |
 
 ## Inference gateway (home server = this box, `trading-ryzen`)
@@ -41,8 +69,22 @@ Set via `wrangler secret put <NAME> --config infra/wrangler.toml` (production) o
 ### Public exposure: tunnel is dev-only right now, not production-stable
 
 - Tried a **named Cloudflare Tunnel** on `gateway-fluent.blockedordown.com` (the only domain on the account) — blocked at multiple layers by that zone's bot protection (Managed Challenge survived both a WAF custom-rule skip and a Configuration Rule forcing Security Level off, almost certainly Bot/Super Bot Fight Mode, which has no clean per-hostname bypass). **Abandoned** — the named tunnel, its DNS CNAME, the WAF custom rule, and the Configuration Rule were all deleted; `blockedordown.com` was left otherwise untouched per explicit instruction to keep Fluent fully separate from that project.
-- Currently using a **quick tunnel** instead: `cloudflared tunnel --url http://localhost:8000 --protocol http2` (note: `--protocol http2` is required — this network's outbound QUIC/UDP 7844 is blocked, and plain `cloudflared tunnel --url` without a forced protocol hangs retrying QUIC). This prints a random `*.trycloudflare.com` hostname **every time it starts** — not committed to systemd (a `Restart=always` unit would silently break `GATEWAY_URL` on every restart), and **not baked into `infra/wrangler.toml`** either (that file's `GATEWAY_URL` default is deliberately the unroutable `gateway.fluent.example.com`, so `worker`'s test suite stays deterministic with no live network dependency). To point local `wrangler dev` at the real running gateway, set `GATEWAY_URL` in `worker/.dev.vars` to whatever quick-tunnel URL is currently printed.
+- Currently using a **quick tunnel** instead: `cloudflared tunnel --url http://localhost:8000 --protocol http2` (note: `--protocol http2` is required — this network's outbound QUIC/UDP 7844 is blocked, and plain `cloudflared tunnel --url` without a forced protocol hangs retrying QUIC). This prints a random `*.trycloudflare.com` hostname **every time it starts** — not committed to systemd (a `Restart=always` unit would silently break `GATEWAY_URL` on every restart), and **not baked into `infra/wrangler.toml`** either (that file's `GATEWAY_URL` default is deliberately the unroutable `gateway.fluent.example.com`, so `worker`'s test suite stays deterministic with no live network dependency). To point local `wrangler dev` at the real running gateway, set `GATEWAY_URL` in `infra/.dev.vars` (see the location gotcha in Secrets above) to whatever quick-tunnel URL is currently printed.
 - **TODO before production (M8 or earlier):** get a dedicated domain for Fluent (not blockedordown.com), redo `cloudflared tunnel login` against it, recreate a named tunnel + systemd unit (deleted files: `infra/cloudflared/config.yml`, `infra/systemd/fluent-cloudflared.service` — recreate from the M1 commit history as a starting point), and update `GATEWAY_URL` to the stable hostname.
+
+## Worker auth + profile (M2, backend half)
+
+**Done — the Worker side of M2.** The iOS half (Theme.swift, onboarding UI) is separate and not started; see the note below.
+
+- `POST /v1/auth/device` (`worker/src/routes/auth.ts`): create-or-verify anonymous device account. `{device_pubid, device_secret}` in, `{user_id, token}` out. First call for a `device_pubid` creates a `users` row with onboarding-pending defaults (`native_lang: en, target_lang: de, level: beginner, interests: [], tutor_name: "Tutor"`) + a `devices` row (`secret_hash = sha256(device_secret)`). Repeat calls verify the hash and return the same `user_id`; a mismatched secret is a 401, not a new account. Rate limited 20/IP/hour via the new generic `worker/src/rateLimit.ts` KV fixed-window helper (reusable for the chat/TTS/camera limits in CLAUDE.md §13 later).
+- Bearer token (`worker/src/crypto.ts`): opaque `${userId}.${issuedAt}.${sig}` via WebCrypto HMAC-SHA256, exactly per CLAUDE.md §12 — no JWT library. Verified with a timing-safe compare. No expiry in v1; revocation is a KV denylist keyed `auth:denylist:<token>` (denylist-writing isn't wired to any route yet — no logout/revoke endpoint exists in v1 scope, but the seam is there).
+- `worker/src/middleware/authenticate.ts`: Hono middleware requiring `Authorization: Bearer <token>`, sets `c.set("userId", ...)`. Applied to every `/v1/profile/*` route; `/v1/auth/device` is the only unauthenticated `/v1` route (mirrors the CLAUDE.md §6 contract).
+- `GET /v1/profile` / `PUT /v1/profile` (`worker/src/routes/profile.ts`): read/update the onboarding fields + streak fields. `PUT` validates against `profileUpdateSchema` (zod, `worker/src/schemas.ts`).
+- `worker/src/repos/users.ts`: all `users`/`devices` D1 queries live here, not inline in routes.
+- 10 new vitest tests (create, repeat-auth same user_id, wrong-secret 401, malformed body 400, rate-limit 429, profile defaults, PUT+GET round-trip, invalid PUT 400, no-token 401, tampered-token 401) — all passing, plus the pre-existing 2. Test D1 now gets real migrations applied via a `setupFiles` hook (`worker/test/apply-migrations.ts` + `readD1Migrations` in `vitest.config.ts`) — previously the isolated test database had no tables at all and every D1-touching test would have failed.
+- Live-verified against local D1 through `wrangler dev` (not just the test suite): registered a device, fetched onboarding-pending defaults, PUT a full onboarding payload, confirmed GET reflects it, confirmed repeat-auth returns the same `user_id`, confirmed wrong-secret and no-token are both rejected. Test rows cleaned out of local D1 afterward.
+
+**iOS half of M2 is NOT started.** This box has no Xcode — the `app/` Xcode project doesn't exist in this repo yet (per `SETUP.md` Part B, it's created on your Mac and shares this repo). `Theme.swift` (DESIGN.md tokens + core components) and the full onboarding flow (DESIGN.md §9, incl. adaptive placement) are still pending and can only be built once `app/` exists. The M2 CLAUDE.md verify step ("fresh install -> onboarded profile row in D1; onboarding feels like DESIGN.md") is only partially checkable right now — the backend half is verified (a fresh device really does get an onboarded profile row via the API), but the actual SwiftUI onboarding UX can't be judged without the app.
 
 ## Hetzner CX23 control node
 
@@ -58,8 +100,9 @@ Fetched by `gateway/scripts/setup_piper.sh` (binary + both voice models are giti
 ## Local dev
 
 ```bash
-cd worker && npm install && npm run dev     # wrangler dev, needs worker/.dev.vars
-cd worker && npm test                        # vitest against local D1/KV bindings
+cd infra && cp .dev.vars.example .dev.vars   # then fill in real values (see Secrets above)
+cd worker && npm install && npm run dev     # wrangler dev — reads ../infra/.dev.vars, NOT worker/.dev.vars
+cd worker && npm test                        # vitest — migrations auto-applied to isolated test D1
 cd shared && npm install && npm test         # schema round-trip fixtures
 cd infra && ./migrate.sh --local             # apply migrations to local D1
 
@@ -70,7 +113,22 @@ cd gateway && make dev                       # uvicorn, needs gateway/.env
 cd gateway && make test                      # pytest, mocked Ollama/Piper
 ```
 
+**Manual end-to-end check for the auth+profile flow** (what was used to verify M2's backend half — useful to re-run after touching auth code):
+```bash
+# with wrangler dev running on :8787
+curl -s -X POST http://localhost:8787/v1/auth/device -H "Content-Type: application/json" \
+  -d '{"device_pubid":"test-1","device_secret":"my-secret"}'
+# -> {"user_id": "...", "token": "..."}  — save the token
+curl -s http://localhost:8787/v1/profile -H "Authorization: Bearer <token>"
+# -> onboarding-pending defaults
+curl -s -X PUT http://localhost:8787/v1/profile -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"native_lang":"en","target_lang":"de","level":"elementary","interests":["travel"],"tutor_name":"Emma","tutor_persona":"sunny","tz":"Europe/Berlin","reminder_time":"19:00","daily_goal":10}'
+# re-POST /v1/auth/device with the same device_pubid + secret -> same user_id
+# clean up test rows afterward: wrangler d1 execute fluent-db --local --command "DELETE FROM devices WHERE id='test-1'; DELETE FROM users WHERE id='<user_id>'"
+```
+
 ## Milestone log
 
 - **M0 (scaffold & contracts):** done. Repo layout, `/shared` schemas + fixtures, Worker skeleton (`/v1/health`, error contract), D1 migration `0001_init.sql`. Gateway does not exist yet, so `/v1/health` correctly reports `gateway: "down"`. Cloudflare resources (D1/KV/R2) created and migration applied local + remote.
 - **M1 (inference gateway):** done. FastAPI gateway (`/healthz`, `/v1/chat`, `/v1/tts`) live on this box, systemd-managed, `X-Gateway-Secret`-protected. Verified end-to-end through a public tunnel: Worker's `/v1/health` reports `gateway: "ok"`, and a real chat completion + TTS render (valid `.m4a`) both round-tripped through the tunnel from outside the box. Public exposure is a dev-only quick tunnel pending a dedicated domain — see above.
+- **M2 (auth + onboarding + design foundation) — backend half done, iOS half not started.** `POST /v1/auth/device`, `GET`/`PUT /v1/profile`, HMAC bearer tokens, auth middleware — see "Worker auth + profile" section above for full detail. 12 new/updated vitest tests passing, live-verified through `wrangler dev` against local D1. `Theme.swift` and the full DESIGN.md §9 onboarding flow need the iOS `app/` project, which doesn't exist on this Linux box yet — that's the next concrete blocker (needs the user's Mac, `SETUP.md` Part B).
