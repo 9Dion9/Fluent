@@ -141,15 +141,8 @@ struct ChatView: View {
 
     private func startRecording() {
         Task {
-            if !voiceRecorder.isAvailable {
-                let granted = await voiceRecorder.requestPermissions()
-                guard granted else {
-                    micUnavailableHint = true
-                    return
-                }
-            }
-            micUnavailableHint = false
-            voiceRecorder.startRecording()
+            let started = await voiceRecorder.startRecording()
+            micUnavailableHint = !started
         }
     }
 

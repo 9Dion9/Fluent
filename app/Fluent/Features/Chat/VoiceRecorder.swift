@@ -14,12 +14,12 @@ import Speech
 final class VoiceRecorder {
     private(set) var isRecording = false
     private(set) var transcript = ""
-    /// False when STT genuinely can't run (denied permission, unsupported
-    /// locale, no recognizer) — the mic button hides/disables per CLAUDE.md
-    /// §13's degradation matrix ("STT unavailable -> voice button falls back
-    /// to server STT or hides with a hint"). Since the recognizer already
-    /// falls back to Apple's server recognition automatically, this only
-    /// goes false when even that path is unavailable.
+    /// False once we've established recording genuinely can't happen (mic or
+    /// speech permission denied, no recognizer for this locale) — the mic
+    /// button shows a hint per CLAUDE.md §13's degradation matrix ("STT
+    /// unavailable -> voice button falls back to server STT or hides with a
+    /// hint"). Starts `true`; only sours after a real failed attempt, since
+    /// authorization status alone shouldn't hide the button pre-emptively.
     private(set) var isAvailable = true
 
     private var recognizer: SFSpeechRecognizer?
@@ -30,29 +30,22 @@ final class VoiceRecorder {
     func configure(forTargetLang lang: String) {
         let localeID = lang == "de" ? "de-DE" : "en-US"
         recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeID))
-        isAvailable = recognizer?.isAvailable ?? false
     }
 
-    func requestPermissions() async -> Bool {
-        let speechStatus = await withCheckedContinuation { (continuation: CheckedContinuation<SFSpeechRecognizerAuthorizationStatus, Never>) in
-            SFSpeechRecognizer.requestAuthorization { status in
-                continuation.resume(returning: status)
-            }
-        }
-        guard speechStatus == .authorized else {
+    /// Starts recording, requesting mic/speech permission first if it hasn't
+    /// been granted yet. Returns `false` (and sets `isAvailable = false`) if
+    /// permission was denied or recording couldn't start for any reason.
+    @discardableResult
+    func startRecording() async -> Bool {
+        guard !isRecording else { return true }
+
+        guard await ensureAuthorized() else {
             isAvailable = false
             return false
         }
-
-        let micGranted = await AVAudioApplication.requestRecordPermission()
-        if !micGranted { isAvailable = false }
-        return micGranted
-    }
-
-    func startRecording() {
         guard let recognizer, recognizer.isAvailable else {
             isAvailable = false
-            return
+            return false
         }
         transcript = ""
 
@@ -62,7 +55,7 @@ final class VoiceRecorder {
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             isAvailable = false
-            return
+            return false
         }
 
         let request = SFSpeechAudioBufferRecognitionRequest()
@@ -88,9 +81,10 @@ final class VoiceRecorder {
         } catch {
             isAvailable = false
             teardownEngine()
-            return
+            return false
         }
         isRecording = true
+        isAvailable = true
 
         recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             guard let self else { return }
@@ -101,6 +95,7 @@ final class VoiceRecorder {
                 self.teardownEngine()
             }
         }
+        return true
     }
 
     @discardableResult
@@ -109,6 +104,35 @@ final class VoiceRecorder {
         teardownEngine()
         isRecording = false
         return transcript
+    }
+
+    /// Checks current authorization and prompts for whichever permission
+    /// hasn't been decided yet. Cheap (no UI) once both are already granted.
+    private func ensureAuthorized() async -> Bool {
+        let speechStatus = SFSpeechRecognizer.authorizationStatus()
+        let speechAuthorized: Bool
+        switch speechStatus {
+        case .authorized:
+            speechAuthorized = true
+        case .notDetermined:
+            speechAuthorized = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                SFSpeechRecognizer.requestAuthorization { status in
+                    continuation.resume(returning: status == .authorized)
+                }
+            }
+        default:
+            speechAuthorized = false
+        }
+        guard speechAuthorized else { return false }
+
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted:
+            return true
+        case .undetermined:
+            return await AVAudioApplication.requestRecordPermission()
+        default:
+            return false
+        }
     }
 
     private func teardownEngine() {
