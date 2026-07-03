@@ -1,0 +1,29 @@
+name = "fluent-worker"
+main = "../worker/src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Fill in after `wrangler d1 create fluent-db` (see docs/RUNBOOK.md).
+[[d1_databases]]
+binding = "DB"
+database_name = "fluent-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# Fill in after `wrangler kv namespace create fluent-kv`.
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Fill in after `wrangler r2 bucket create fluent-audio`.
+[[r2_buckets]]
+binding = "AUDIO"
+bucket_name = "fluent-audio"
+
+[vars]
+# Cloudflare Tunnel hostname for the home-GPU inference gateway (M1).
+GATEWAY_URL = "https://gateway.fluent.example.com"
+
+# Secrets (never in this file — set via `wrangler secret put <NAME> --config infra/wrangler.toml`):
+#   GATEWAY_SHARED_SECRET   Worker -> gateway auth (X-Gateway-Secret)
+#   TOKEN_SIGNING_KEY       HMAC key for bearer tokens

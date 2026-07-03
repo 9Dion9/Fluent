@@ -1,0 +1,26 @@
+{
+  "card_id": "c_9f8e7d6c",
+  "word": {
+    "id": "w_ab12cd34",
+    "lang": "de",
+    "word": "Tisch",
+    "translation": "table",
+    "pos": "noun",
+    "gender": "der",
+    "ipa": "/tɪʃ/",
+    "cefr": "A1",
+    "topics": ["daily life", "furniture"],
+    "example": "Der Tisch steht in der Küche.",
+    "example_translation": "The table is in the kitchen.",
+    "audio_url": "https://audio.fluent.app/de/w_ab12cd34.m4a",
+    "source": "pipeline",
+    "verified": true
+  },
+  "due_at": 1751500800000,
+  "stability": 4.2,
+  "difficulty": 5.8,
+  "reps": 3,
+  "lapses": 0,
+  "state": "review",
+  "last_review_at": 1751414400000
+}

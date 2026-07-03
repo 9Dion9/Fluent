@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fluent.app/schemas/quiz.json",
+  "title": "Quiz",
+  "type": "object",
+  "required": ["id", "lang", "type", "prompt", "answer", "difficulty"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "lang": { "type": "string", "minLength": 2, "maxLength": 5 },
+    "type": {
+      "type": "string",
+      "enum": ["mcq", "match", "fillblank", "order"]
+    },
+    "prompt": {
+      "description": "Shape depends on type: mcq={question,options}; match={pairs:[[a,b],...]}; fillblank={sentence,blank_index}; order={tokens}",
+      "type": "object"
+    },
+    "answer": {
+      "description": "Shape depends on type: mcq=index; match=index mapping; fillblank=string; order=token index array",
+      "type": "object"
+    },
+    "difficulty": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "word_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

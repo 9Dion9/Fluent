@@ -1,0 +1,19 @@
+{
+  "reply": "Ha, close! You meant \"ich bin gegangen\" — nice try though. So, where did you go?",
+  "reply_target_text": "Wohin bist du gegangen?",
+  "corrections": [
+    {
+      "original": "ich habe gegeht",
+      "corrected": "ich bin gegangen",
+      "explanation": "'gehen' takes 'sein' in the perfect tense 🙂"
+    }
+  ],
+  "suggested_replies": ["Ich bin ins Kino gegangen.", "Und du?"],
+  "new_vocab": [
+    {
+      "word": "gegangen",
+      "translation": "gone/went",
+      "example": "Ich bin nach Hause gegangen."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "q_11223344",
+  "lang": "de",
+  "type": "mcq",
+  "prompt": {
+    "question": "What does \"Tisch\" mean?",
+    "options": ["chair", "table", "window", "door"]
+  },
+  "answer": { "correct_index": 1 },
+  "difficulty": 1,
+  "word_ids": ["w_ab12cd34"]
+}

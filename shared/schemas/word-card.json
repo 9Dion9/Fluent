@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fluent.app/schemas/word-card.json",
+  "title": "WordCard",
+  "type": "object",
+  "required": ["id", "lang", "word", "translation", "cefr"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "lang": { "type": "string", "minLength": 2, "maxLength": 5 },
+    "word": { "type": "string" },
+    "translation": { "type": "string" },
+    "pos": { "type": ["string", "null"] },
+    "gender": {
+      "type": ["string", "null"],
+      "description": "der/die/das etc. null for genderless languages/POS."
+    },
+    "ipa": { "type": ["string", "null"] },
+    "cefr": {
+      "type": "string",
+      "enum": ["A1", "A2", "B1", "B2", "C1"]
+    },
+    "topics": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "example": { "type": ["string", "null"] },
+    "example_translation": { "type": ["string", "null"] },
+    "audio_url": { "type": ["string", "null"], "format": "uri" },
+    "source": {
+      "type": "string",
+      "enum": ["pipeline", "camera_vlm"]
+    },
+    "verified": { "type": "boolean" }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fluent.app/schemas/scenario.json",
+  "title": "Scenario",
+  "type": "object",
+  "required": ["id", "lang", "title", "min_level", "seed_prompt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "lang": { "type": "string", "minLength": 2, "maxLength": 5 },
+    "title": { "type": "string" },
+    "emoji": { "type": ["string", "null"] },
+    "min_level": {
+      "type": "string",
+      "enum": ["A1", "A2", "B1", "B2", "C1"]
+    },
+    "seed_prompt": { "type": "string" },
+    "focus_word_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

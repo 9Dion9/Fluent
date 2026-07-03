@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fluent.app/schemas/chat-reply.json",
+  "title": "ChatReply",
+  "type": "object",
+  "required": ["reply", "reply_target_text", "corrections", "suggested_replies", "new_vocab"],
+  "additionalProperties": false,
+  "properties": {
+    "reply": { "type": "string" },
+    "reply_target_text": { "type": "string" },
+    "corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["original", "corrected", "explanation"],
+        "additionalProperties": false,
+        "properties": {
+          "original": { "type": "string" },
+          "corrected": { "type": "string" },
+          "explanation": { "type": "string" }
+        }
+      }
+    },
+    "suggested_replies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 4
+    },
+    "new_vocab": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["word", "translation", "example"],
+        "additionalProperties": false,
+        "properties": {
+          "word": { "type": "string" },
+          "translation": { "type": "string" },
+          "example": { "type": "string" }
+        }
+      }
+    }
+  }
+}

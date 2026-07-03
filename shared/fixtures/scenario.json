@@ -1,0 +1,9 @@
+{
+  "id": "s_cafe01",
+  "lang": "de",
+  "title": "Order a coffee",
+  "emoji": "☕",
+  "min_level": "A1",
+  "seed_prompt": "You are a friendly barista at a Berlin café. The user is ordering a drink. Keep it short and encouraging.",
+  "focus_word_ids": ["w_ab12cd34"]
+}

@@ -1,0 +1,34 @@
+# secrets — never commit
+.dev.vars
+*.env
+secrets/
+
+# node
+node_modules/
+npm-debug.log*
+
+# wrangler
+.wrangler/
+worker/.wrangler/
+infra/.wrangler/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# xcode / ios
+app/build/
+app/DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+
+# generated audio (reproducible from the batch pipeline)
+**/*.m4a
+**/*.wav
+
+# editor
+.vscode/
+.idea/

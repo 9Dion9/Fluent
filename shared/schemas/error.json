@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fluent.app/schemas/error.json",
+  "title": "ErrorResponse",
+  "type": "object",
+  "required": ["error"],
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "type": "object",
+      "required": ["code", "message", "retryable"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "unauthorized",
+            "invalid_request",
+            "rate_limited",
+            "tutor_napping",
+            "not_found",
+            "internal"
+          ]
+        },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" }
+      }
+    }
+  }
+}

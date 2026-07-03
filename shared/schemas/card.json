@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fluent.app/schemas/card.json",
+  "title": "Card",
+  "description": "One row of the FSRS due queue (GET /v1/srs/due), joined with its WordCard.",
+  "type": "object",
+  "required": ["card_id", "word", "due_at", "state", "reps", "lapses"],
+  "additionalProperties": false,
+  "properties": {
+    "card_id": { "type": "string" },
+    "word": { "$ref": "https://fluent.app/schemas/word-card.json" },
+    "due_at": { "type": "integer", "description": "unix ms" },
+    "stability": { "type": ["number", "null"] },
+    "difficulty": { "type": ["number", "null"] },
+    "reps": { "type": "integer", "minimum": 0 },
+    "lapses": { "type": "integer", "minimum": 0 },
+    "state": {
+      "type": "string",
+      "enum": ["new", "learning", "review", "relearning"]
+    },
+    "last_review_at": { "type": ["integer", "null"] }
+  }
+}

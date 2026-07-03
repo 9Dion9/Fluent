@@ -1,0 +1,16 @@
+{
+  "id": "w_ab12cd34",
+  "lang": "de",
+  "word": "Tisch",
+  "translation": "table",
+  "pos": "noun",
+  "gender": "der",
+  "ipa": "/tɪʃ/",
+  "cefr": "A1",
+  "topics": ["daily life", "furniture"],
+  "example": "Der Tisch steht in der Küche.",
+  "example_translation": "The table is in the kitchen.",
+  "audio_url": "https://audio.fluent.app/de/w_ab12cd34.m4a",
+  "source": "pipeline",
+  "verified": true
+}

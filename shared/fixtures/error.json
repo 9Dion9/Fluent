@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "You've hit today's chat limit — come back tomorrow!",
+    "retryable": false
+  }
+}
