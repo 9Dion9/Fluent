@@ -67,7 +67,15 @@ struct OnboardingContainerView: View {
             }
             .frame(maxHeight: .infinity)
         }
-        .background(Theme.Colors.bg)
+        .background(
+            ZStack {
+                Theme.Colors.bg
+                if step != .welcome {
+                    OnboardingBackdrop()
+                }
+            }
+            .ignoresSafeArea()
+        )
         .overlay {
             if isSaving {
                 ProgressView().tint(Theme.Colors.accent)

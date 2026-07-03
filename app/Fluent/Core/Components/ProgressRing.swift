@@ -11,6 +11,8 @@ struct ProgressRing: View {
     let progress: Double // 0...1
     var lineWidth: CGFloat = 8
     var size: CGFloat = 64
+    /// Shown centered in the ring, e.g. the daily goal number. `nil` renders no label.
+    var centerLabel: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -29,6 +31,14 @@ struct ProgressRing: View {
                 )
                 .rotationEffect(.degrees(-90))
                 .animation(Theme.Motion.adaptive(reduceMotion), value: progress)
+
+            if let centerLabel {
+                Text(centerLabel)
+                    .font(Theme.Font.display(size * 0.32))
+                    .foregroundStyle(Theme.Colors.ink)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+            }
         }
         .frame(width: size, height: size)
         .accessibilityElement(children: .ignore)
@@ -38,7 +48,7 @@ struct ProgressRing: View {
 }
 
 #Preview {
-    ProgressRing(progress: 0.4)
+    ProgressRing(progress: 0.4, centerLabel: "10")
         .padding()
         .background(Theme.Colors.bg)
 }

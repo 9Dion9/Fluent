@@ -14,10 +14,10 @@ struct MeetTutorView: View {
 
     @FocusState private var nameFieldFocused: Bool
 
-    private let personas: [(id: String, title: String, sample: String)] = [
-        ("sunny", "Sunny", "Ooh, this'll be fun!"),
-        ("dry", "Dry", "I promise this hurts less than the gym."),
-        ("professor", "Professor", "Every word has a story — let's find yours."),
+    private let personas: [(id: String, title: String, sample: String, emoji: String)] = [
+        ("sunny", "Sunny", "Ooh, this'll be fun!", "☀️"),
+        ("dry", "Dry", "I promise this hurts less than the gym.", "🌵"),
+        ("professor", "Professor", "Every word has a story — let's find yours.", "🎓"),
     ]
 
     var body: some View {
@@ -33,6 +33,7 @@ struct MeetTutorView: View {
                         SelectableCard(
                             title: persona.title,
                             subtitle: "\"\(persona.sample)\"",
+                            emoji: persona.emoji,
                             isSelected: viewModel.tutorPersona == persona.id
                         ) {
                             viewModel.tutorPersona = persona.id

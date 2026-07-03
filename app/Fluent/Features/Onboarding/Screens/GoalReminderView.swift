@@ -26,7 +26,11 @@ struct GoalReminderView: View {
                 .foregroundStyle(Theme.Colors.ink)
                 .padding(.top, Theme.Spacing.xl)
 
-            ProgressRing(progress: Double(goalIndex + 1) / Double(goalOptions.count), size: 100)
+            ProgressRing(
+                progress: Double(goalIndex + 1) / Double(goalOptions.count),
+                size: 110,
+                centerLabel: "\(viewModel.dailyGoal)"
+            )
 
             HStack(spacing: Theme.Spacing.md) {
                 ForEach(goalOptions, id: \.self) { goal in
