@@ -21,6 +21,9 @@ final class VoiceRecorder {
     /// hint"). Starts `true`; only sours after a real failed attempt, since
     /// authorization status alone shouldn't hide the button pre-emptively.
     private(set) var isAvailable = true
+    /// Set when the recognizer reports an error (e.g. no network for a locale
+    /// with no on-device model) — surfaced in the UI instead of failing silently.
+    private(set) var lastErrorMessage: String?
 
     private var recognizer: SFSpeechRecognizer?
     private var audioEngine: AVAudioEngine?
@@ -45,9 +48,11 @@ final class VoiceRecorder {
         }
         guard let recognizer, recognizer.isAvailable else {
             isAvailable = false
+            lastErrorMessage = "Speech recognition isn't available right now."
             return false
         }
         transcript = ""
+        lastErrorMessage = nil
 
         let session = AVAudioSession.sharedInstance()
         do {
@@ -87,12 +92,20 @@ final class VoiceRecorder {
         isAvailable = true
 
         recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            guard let self else { return }
-            if let result {
-                self.transcript = result.bestTranscription.formattedString
-            }
-            if error != nil || (result?.isFinal ?? false) {
-                self.teardownEngine()
+            // SFSpeechRecognitionTask's handler isn't guaranteed to fire on the
+            // main thread — hop explicitly so @Observable's change tracking
+            // (and therefore the SwiftUI view) actually sees these mutations.
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let result {
+                    self.transcript = result.bestTranscription.formattedString
+                }
+                if let error {
+                    self.lastErrorMessage = (error as NSError).localizedDescription
+                }
+                if error != nil || (result?.isFinal ?? false) {
+                    self.teardownEngine()
+                }
             }
         }
         return true

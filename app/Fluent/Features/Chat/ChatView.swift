@@ -15,6 +15,7 @@ struct ChatView: View {
     @State private var voiceRecorder = VoiceRecorder()
     @State private var draft = ""
     @State private var micUnavailableHint = false
+    @State private var showErrorToast = false
     @FocusState private var inputFocused: Bool
 
     init(tutorName: String, targetLang: String, seed: OnboardingChatExchange? = nil) {
@@ -104,6 +105,12 @@ struct ChatView: View {
         .task {
             voiceRecorder.configure(forTargetLang: viewModel.targetLang)
         }
+        .toast(isPresented: $showErrorToast, message: viewModel.errorMessage ?? "", systemImage: "exclamationmark.triangle.fill")
+        .onChange(of: viewModel.errorMessage) {
+            // The napping state already renders its own inline EmptyStateView —
+            // only toast for everything else (e.g. an empty voice transcript).
+            showErrorToast = viewModel.errorMessage != nil && !viewModel.isTutorNapping
+        }
     }
 
     private var inputBar: some View {
@@ -148,7 +155,13 @@ struct ChatView: View {
 
     private func stopRecordingAndSend() {
         let transcript = voiceRecorder.stopRecording()
-        guard !transcript.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        guard !transcript.trimmingCharacters(in: .whitespaces).isEmpty else {
+            // Nothing was transcribed — surface why instead of silently doing
+            // nothing (this exact silence was a real bug: see VoiceRecorder).
+            viewModel.errorMessage = voiceRecorder.lastErrorMessage
+                ?? "Didn't catch that — check you're online (voice recognition needs it) and try again."
+            return
+        }
         Task { await viewModel.send(transcript) }
     }
 }
