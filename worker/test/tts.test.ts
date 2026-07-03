@@ -1,5 +1,6 @@
 import { env, fetchMock, SELF } from "cloudflare:test";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { stripForSpeech } from "../src/tts";
 
 const GATEWAY_ORIGIN = "https://gateway.fluent.example.com";
 const FAKE_AUDIO = new Uint8Array([1, 2, 3, 4]);
@@ -40,6 +41,20 @@ function mockTTSRender() {
     .intercept({ path: "/v1/tts", method: "POST" })
     .reply(200, Buffer.from(FAKE_AUDIO), { headers: { "content-type": "audio/mp4" } });
 }
+
+describe("stripForSpeech", () => {
+  it("removes emoji so Piper doesn't read out their Unicode name", () => {
+    expect(stripForSpeech("Hallo! 😊 Wie geht's?")).toBe("Hallo! Wie geht's?");
+  });
+
+  it("removes variation selectors and zero-width joiners riding along with emoji", () => {
+    expect(stripForSpeech("Toll gemacht! 🎉👍🏻")).toBe("Toll gemacht!");
+  });
+
+  it("leaves plain text untouched", () => {
+    expect(stripForSpeech("Ich bin ein Student.")).toBe("Ich bin ein Student.");
+  });
+});
 
 describe("POST /v1/tts", () => {
   beforeEach(async () => {

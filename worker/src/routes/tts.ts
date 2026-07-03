@@ -5,7 +5,7 @@ import { authenticate } from "../middleware/authenticate";
 import { ttsRequestSchema } from "../schemas";
 import { isRateLimited } from "../rateLimit";
 import { checkGatewayHealth, callGatewayTTS, GatewayCallError } from "../gateway";
-import { audioKey, voiceForLang } from "../tts";
+import { audioKey, stripForSpeech, voiceForLang } from "../tts";
 
 export const ttsRoute = new Hono<{ Bindings: Env }>();
 ttsRoute.use("*", authenticate);
@@ -20,7 +20,11 @@ ttsRoute.post("/", async (c) => {
   if (!parsed.success) {
     throw new AppError("invalid_request", "Malformed TTS request.");
   }
-  const { text, lang } = parsed.data;
+  const { lang } = parsed.data;
+  const text = stripForSpeech(parsed.data.text);
+  if (!text) {
+    throw new AppError("invalid_request", "Nothing to speak after removing emoji/symbols.");
+  }
 
   const voice = voiceForLang(lang);
   if (!voice) {
