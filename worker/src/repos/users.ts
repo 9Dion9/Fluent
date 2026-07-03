@@ -79,6 +79,67 @@ export async function getUser(env: Env, userId: string): Promise<UserRow | null>
   return env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(userId).first<UserRow>();
 }
 
+export interface StreakResult {
+  streak_current: number;
+  streak_best: number;
+  streak_freezes: number;
+  freeze_consumed: boolean;
+}
+
+/**
+ * Qualifying activity (>=1 review, daily set completed — CLAUDE.md §0.6) on
+ * `today` (YYYY-MM-DD, user's local date). Idempotent per day: calling this
+ * twice on the same date is a no-op the second time. One freeze is earned
+ * per 7-day streak (max 2 banked) and silently consumed on a missed day if
+ * one's available, per CLAUDE.md §10.
+ */
+export async function recordStreakActivity(env: Env, userId: string, today: string): Promise<StreakResult> {
+  const user = await getUser(env, userId);
+  if (!user) throw new Error("recordStreakActivity: user not found");
+
+  if (user.last_active_date === today) {
+    return {
+      streak_current: user.streak_current,
+      streak_best: user.streak_best,
+      streak_freezes: user.streak_freezes,
+      freeze_consumed: false,
+    };
+  }
+
+  const daysSinceLastActive = user.last_active_date
+    ? Math.round((Date.parse(today) - Date.parse(user.last_active_date)) / 86_400_000)
+    : null;
+
+  let streakCurrent: number;
+  let freezes = user.streak_freezes;
+  let freezeConsumed = false;
+
+  if (daysSinceLastActive === 1) {
+    streakCurrent = user.streak_current + 1;
+  } else if (daysSinceLastActive === 2 && freezes > 0) {
+    // Exactly one day was missed and a freeze is banked — consume it silently.
+    streakCurrent = user.streak_current + 1;
+    freezes -= 1;
+    freezeConsumed = true;
+  } else {
+    streakCurrent = 1; // first-ever activity, or the gap was too large to save
+  }
+
+  if (streakCurrent > 0 && streakCurrent % 7 === 0 && freezes < 2) {
+    freezes += 1;
+  }
+
+  const streakBest = Math.max(user.streak_best, streakCurrent);
+
+  await env.DB.prepare(
+    "UPDATE users SET streak_current = ?, streak_best = ?, streak_freezes = ?, last_active_date = ? WHERE id = ?",
+  )
+    .bind(streakCurrent, streakBest, freezes, today, userId)
+    .run();
+
+  return { streak_current: streakCurrent, streak_best: streakBest, streak_freezes: freezes, freeze_consumed: freezeConsumed };
+}
+
 export interface ProfileUpdate {
   native_lang: string;
   target_lang: string;

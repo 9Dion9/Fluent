@@ -98,7 +98,13 @@ struct GoalReminderView: View {
         Task {
             let center = UNUserNotificationCenter.current()
             let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
-            if !granted {
+            if granted, let reminderTime = viewModel.reminderTime {
+                await LocalNotifier().scheduleDailyReminder(
+                    at: reminderTime,
+                    tutorName: viewModel.tutorName.isEmpty ? "Fluent" : viewModel.tutorName,
+                    persona: viewModel.tutorPersona
+                )
+            } else {
                 viewModel.reminderTime = nil
             }
             onContinue()
