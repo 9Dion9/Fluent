@@ -29,6 +29,10 @@ xcuserdata/
 **/*.m4a
 **/*.wav
 
+# gateway: downloaded binaries/models — fetched by gateway/scripts/setup_piper.sh
+gateway/bin/
+gateway/voices/
+
 # editor
 .vscode/
 .idea/

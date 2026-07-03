@@ -22,6 +22,9 @@ bucket_name = "fluent-audio"
 
 [vars]
 # Cloudflare Tunnel hostname for the home-GPU inference gateway (M1).
+# Deliberately unroutable here so tests/CI stay deterministic (no live network
+# dependency). The real dev-quick-tunnel URL changes on every restart — set it
+# in worker/.dev.vars locally instead of committing it. See docs/RUNBOOK.md.
 GATEWAY_URL = "https://gateway.fluent.example.com"
 
 # Secrets (never in this file — set via `wrangler secret put <NAME> --config infra/wrangler.toml`):
