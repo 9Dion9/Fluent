@@ -4,7 +4,23 @@
 
 ## Resume here (session continuity)
 
-**Where we are:** M0 and M1 done and committed. M2's Worker/backend half (device auth, profile CRUD) is done; the iOS half (Theme.swift, onboarding UI) is **not started** — it needs the Xcode `app/` project, which doesn't exist on this Linux box (see `SETUP.md` Part B — that's a Mac-side, human step). See the Milestone log at the bottom for full per-milestone detail.
+**Where we are:** M0 and M1 done and committed. M2's Worker/backend half (device auth, profile CRUD) is done. SETUP.md Parts A-C are done on the user's Mac (Xcode installed, Hello World running on a real iPhone 12). The repo is now pushed to GitHub (see "GitHub remote" below) so the Mac-created Xcode project can be merged in — that merge hasn't happened yet as of this writing. See the Milestone log at the bottom for full per-milestone detail.
+
+## GitHub remote
+
+Repo: **https://github.com/9Dion9/Fluent** (private). This box (`trading-ryzen`) pushes via a dedicated **deploy key** (write-enabled), not a personal token:
+- Key: `~/.ssh/fluent_deploy_key` (ed25519, generated on this box, never leaves it)
+- SSH config alias: `github-fluent` in `~/.ssh/config`, so remote URL is `github-fluent:9Dion9/Fluent.git` (not the usual `git@github.com:...` — the alias is what selects the right key)
+- `git remote -v` on this box should show `origin` pointing at that alias URL
+- The Mac side should use its own auth (the user's personal GitHub SSH key or HTTPS+PAT via `gh auth login` / Xcode's built-in GitHub account) — the deploy key is scoped to this box only
+
+**Mac-side steps to merge the Xcode project in** (pending as of this writing):
+1. On the Mac: `git clone https://github.com/9Dion9/Fluent.git ~/dev/fluent` (or wherever) — this pulls the real M0-M2 backend work
+2. Move/copy the Xcode-created project (currently at `/Users/dion/Fluent` per the user's session) into `~/dev/fluent/app/` — i.e. the `.xcodeproj`, `Fluent/`, `FluentTests/`, `FluentUITests/` folders should end up at `~/dev/fluent/app/Fluent.xcodeproj` etc.
+3. Re-open the project from its new location in Xcode (may need to re-confirm signing/team, bundle ID should be unchanged)
+4. Confirm ⌘R still runs on the iPhone from the new path
+5. `cd ~/dev/fluent && git add app/ && git commit -m "..." && git push`
+6. This box then `git pull` to get `app/` and continue from here for future Swift work (the "filesystem-synchronized folder group" from SETUP.md B3 means new `.swift` files this agent creates will auto-appear in the Xcode target — but only true on the Mac; edits made here won't show live in Xcode until the user pulls)
 
 **Live processes on this box (`trading-ryzen`) right now:**
 - `fluent-gateway.service` (systemd, `Restart=always`) — the inference gateway, bound to `127.0.0.1:8000`. Check with `systemctl is-active fluent-gateway.service`.
