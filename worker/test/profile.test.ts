@@ -66,6 +66,33 @@ describe("/v1/profile", () => {
     expect(getBody).toEqual(putBody);
   });
 
+  it("accepts a profile update with reminder_time omitted entirely", async () => {
+    // Regression test: Swift's Encodable synthesis omits nil-optional fields
+    // rather than sending an explicit `null` — this is exactly what the app
+    // sends when the user skips the reminder step in onboarding.
+    const { token } = await authedUser("profile-dev-5");
+    const update = {
+      native_lang: "en",
+      target_lang: "de",
+      level: "beginner",
+      interests: ["travel", "food"],
+      tutor_name: "Emma",
+      tutor_persona: "sunny",
+      tz: "Europe/Berlin",
+      daily_goal: 10,
+      // reminder_time deliberately omitted
+    };
+
+    const res = await SELF.fetch("https://worker.test/v1/profile", {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(update),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json<Record<string, unknown>>();
+    expect(body.reminder_time).toBeNull();
+  });
+
   it("rejects an invalid profile update", async () => {
     const { token } = await authedUser("profile-dev-3");
     const res = await SELF.fetch("https://worker.test/v1/profile", {

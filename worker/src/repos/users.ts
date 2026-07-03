@@ -87,7 +87,7 @@ export interface ProfileUpdate {
   tutor_name: string;
   tutor_persona: string;
   tz: string;
-  reminder_time: string | null;
+  reminder_time?: string | null;
   daily_goal: number;
 }
 
@@ -106,7 +106,7 @@ export async function updateProfile(env: Env, userId: string, update: ProfileUpd
       update.tutor_name,
       update.tutor_persona,
       update.tz,
-      update.reminder_time,
+      update.reminder_time ?? null,
       update.daily_goal,
       userId,
     )

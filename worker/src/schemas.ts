@@ -97,10 +97,14 @@ export const profileUpdateSchema = z.object({
   tutor_name: z.string().min(1),
   tutor_persona: z.enum(["sunny", "dry", "professor"]),
   tz: z.string(),
+  // `.optional()` because Swift's Encodable synthesis omits nil-optional
+  // fields entirely rather than sending an explicit `null` — the client
+  // never sends this key at all when there's no reminder set.
   reminder_time: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
-    .nullable(),
+    .nullable()
+    .optional(),
   daily_goal: z.number().int().positive(),
 });
 
