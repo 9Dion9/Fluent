@@ -17,6 +17,10 @@ export default defineWorkersConfig(async () => {
               // Test-only dummy values — vitest-pool-workers doesn't read worker/.dev.vars.
               TOKEN_SIGNING_KEY: "test-signing-key",
               GATEWAY_SHARED_SECRET: "test-gateway-secret",
+              // Deliberately unroutable so tests stay deterministic with no live
+              // network dependency (GATEWAY_URL moved from [vars] to a real secret
+              // in production — see infra/wrangler.toml).
+              GATEWAY_URL: "https://gateway.fluent.example.com",
             },
           },
         },

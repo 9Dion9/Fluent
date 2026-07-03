@@ -20,13 +20,12 @@ id = "9d59d484186445a3b90063516c8d3629"
 binding = "AUDIO"
 bucket_name = "fluent-audio"
 
-[vars]
-# Cloudflare Tunnel hostname for the home-GPU inference gateway (M1).
-# Deliberately unroutable here so tests/CI stay deterministic (no live network
-# dependency). The real dev-quick-tunnel URL changes on every restart — set it
-# in worker/.dev.vars locally instead of committing it. See docs/RUNBOOK.md.
-GATEWAY_URL = "https://gateway.fluent.example.com"
-
 # Secrets (never in this file — set via `wrangler secret put <NAME> --config infra/wrangler.toml`):
 #   GATEWAY_SHARED_SECRET   Worker -> gateway auth (X-Gateway-Secret)
 #   TOKEN_SIGNING_KEY       HMAC key for bearer tokens
+#   GATEWAY_URL             Cloudflare Tunnel hostname for the home-GPU inference gateway (M1).
+#     A secret rather than a [vars] entry because it changes on every quick-tunnel
+#     restart and Cloudflare doesn't allow a secret and a var to share a binding
+#     name. Local dev overrides it via infra/.dev.vars (see docs/RUNBOOK.md); the
+#     test suite gets a deterministic unroutable placeholder from
+#     worker/vitest.config.ts's miniflare.bindings instead of this file.
