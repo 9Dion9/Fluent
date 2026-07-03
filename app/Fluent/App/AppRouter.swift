@@ -8,6 +8,18 @@
 
 import SwiftUI
 
+/// A completed real `/v1/chat` round-trip from FirstMessageView (DESIGN.md §9.9),
+/// carried into Home so Chat continues the same server-side conversation
+/// instead of starting a fresh one.
+struct OnboardingChatExchange {
+    let conversationID: String
+    let tutorGreeting: String
+    let userReply: String
+    let tutorReply: String
+    let corrections: [ChatReply.Correction]
+    let suggestedReplies: [String]
+}
+
 @Observable
 final class AppRouter {
     enum Screen {
@@ -19,6 +31,7 @@ final class AppRouter {
 
     var screen: Screen = .launching
     var profile: Profile?
+    var pendingChatSeed: OnboardingChatExchange?
 
     private let authProvider: AuthProvider
 

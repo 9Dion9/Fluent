@@ -78,6 +78,16 @@ actor APIClient {
         try await request(path: "/v1/profile", method: "PUT", body: update)
     }
 
+    // MARK: Chat
+
+    func sendChat(text: String, conversationID: String?, scenarioID: String? = nil) async throws -> ChatReply {
+        try await request(
+            path: "/v1/chat",
+            method: "POST",
+            body: ChatRequest(conversationID: conversationID, scenarioID: scenarioID, text: text)
+        )
+    }
+
     // MARK: Core request plumbing
 
     private func request<Body: Encodable, Response: Decodable>(

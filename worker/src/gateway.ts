@@ -1,5 +1,45 @@
 import type { Env } from "./env";
 
+/** Worker->gateway /v1/chat: 25s timeout, no retries (avoid double generation), per CLAUDE.md §2. */
+const CHAT_TIMEOUT_MS = 25_000;
+
+export class GatewayCallError extends Error {}
+
+/**
+ * Calls the gateway's generic /v1/chat wrapper and returns the raw assistant
+ * text (expected to be a JSON string matching ChatReply — validated by the
+ * caller). Records the result against the circuit breaker either way.
+ */
+export async function callGatewayChat(
+  env: Env,
+  messages: { role: "system" | "user" | "assistant"; content: string }[],
+): Promise<string> {
+  try {
+    const res = await fetch(`${env.GATEWAY_URL}/v1/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Gateway-Secret": env.GATEWAY_SHARED_SECRET,
+      },
+      body: JSON.stringify({ messages }),
+      signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      await recordGatewayResult(env, false);
+      throw new GatewayCallError(`gateway /v1/chat returned ${res.status}`);
+    }
+
+    const data = (await res.json()) as { text: string };
+    await recordGatewayResult(env, true);
+    return data.text;
+  } catch (err) {
+    if (err instanceof GatewayCallError) throw err;
+    await recordGatewayResult(env, false);
+    throw new GatewayCallError(String(err));
+  }
+}
+
 const HEALTH_CACHE_KEY = "gw:health";
 // KV enforces a 60s minimum TTL. CLAUDE.md §2 specs a 30s cache; 60s is the
 // closest we can get without rolling a custom expiry check on read.

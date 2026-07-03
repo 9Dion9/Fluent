@@ -4,8 +4,9 @@
 //
 //  DESIGN.md §9.9 — the guaranteed win. Tutor's first message lands with a
 //  suggested-reply chip already glowing so the first interaction cannot fail.
-//  Real chat (POST /v1/chat) is M3 — this is a scripted, local-only exchange
-//  so onboarding's emotional arc is complete today; M3 swaps in the real call.
+//  The user's tap fires a real POST /v1/chat; if the gateway is napping we
+//  fall back to a scripted delight line so onboarding's emotional arc never
+//  hard-fails (DESIGN.md §9: "the first tutor interaction cannot fail").
 //
 
 import SwiftUI
@@ -19,6 +20,8 @@ struct FirstMessageView: View {
     @State private var userReplySent = false
     @State private var showTutorDelight = false
     @State private var showRing = false
+    @State private var tutorDelightText = ""
+    @State private var chatExchange: OnboardingChatExchange?
 
     private var greeting: (native: String, targetWord: String) {
         viewModel.targetLang == "de"
@@ -42,7 +45,7 @@ struct FirstMessageView: View {
                         TypingIndicator()
                     }
                     if showTutorDelight {
-                        ChatBubble(text: "You did it! 🎉 That's real \(viewModel.targetLang == "de" ? "German" : "English"), on your first try.", role: .tutor)
+                        ChatBubble(text: tutorDelightText, role: .tutor)
                             .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 }
@@ -57,6 +60,7 @@ struct FirstMessageView: View {
                         .foregroundStyle(Theme.Colors.inkSoft)
                     Spacer()
                     PrimaryButton(title: "Start exploring") {
+                        router.pendingChatSeed = chatExchange
                         if let profile = router.profile {
                             router.onboardingCompleted(with: profile)
                         }
@@ -87,7 +91,26 @@ struct FirstMessageView: View {
         userReplySent = true
         showTyping = true
         Task {
-            try? await Task.sleep(for: .milliseconds(900))
+            let scriptedDelight = "You did it! 🎉 That's real \(viewModel.targetLang == "de" ? "German" : "English"), on your first try."
+
+            do {
+                let reply = try await APIClient.shared.sendChat(text: greeting.targetWord, conversationID: nil)
+                chatExchange = OnboardingChatExchange(
+                    conversationID: reply.conversationID,
+                    tutorGreeting: greeting.native,
+                    userReply: greeting.targetWord,
+                    tutorReply: reply.reply,
+                    corrections: reply.corrections,
+                    suggestedReplies: reply.suggestedReplies
+                )
+                tutorDelightText = reply.reply
+            } catch {
+                // Gateway napping or offline — onboarding's first interaction
+                // must never fail, so we fall back to the scripted delight line
+                // and Home simply starts a fresh conversation (DESIGN.md §9).
+                tutorDelightText = scriptedDelight
+            }
+
             showTyping = false
             showTutorDelight = true
             try? await Task.sleep(for: .milliseconds(400))

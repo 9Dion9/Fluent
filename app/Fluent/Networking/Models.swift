@@ -95,6 +95,10 @@ nonisolated struct ChatReply: Codable, Hashable, Sendable {
     let corrections: [Correction]
     let suggestedReplies: [String]
     let newVocab: [NewVocab]
+    /// Not part of the canonical /shared ChatReply schema (that's the model's
+    /// output contract) — the Worker adds this to its HTTP response envelope
+    /// so the app can continue the same conversation on the next turn.
+    let conversationID: String
 
     enum CodingKeys: String, CodingKey {
         case reply
@@ -102,6 +106,21 @@ nonisolated struct ChatReply: Codable, Hashable, Sendable {
         case corrections
         case suggestedReplies = "suggested_replies"
         case newVocab = "new_vocab"
+        case conversationID = "conversation_id"
+    }
+}
+
+// MARK: - Chat request (worker-specific; mirrors POST /v1/chat body, CLAUDE.md §6)
+
+nonisolated struct ChatRequest: Encodable, Sendable {
+    var conversationID: String?
+    var scenarioID: String?
+    var text: String
+
+    enum CodingKeys: String, CodingKey {
+        case conversationID = "conversation_id"
+        case scenarioID = "scenario_id"
+        case text
     }
 }
 
