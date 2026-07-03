@@ -28,11 +28,20 @@ final class ChatViewModel {
 
     private var conversationID: String?
     private let apiClient: APIClient
+    private let ttsPlayer: TTSPlayer
     let tutorName: String
+    let targetLang: String
 
-    init(apiClient: APIClient = .shared, tutorName: String) {
+    var isMuted: Bool {
+        get { ttsPlayer.isMuted }
+        set { ttsPlayer.isMuted = newValue }
+    }
+
+    init(apiClient: APIClient = .shared, ttsPlayer: TTSPlayer = TTSPlayer(), tutorName: String, targetLang: String) {
         self.apiClient = apiClient
+        self.ttsPlayer = ttsPlayer
         self.tutorName = tutorName
+        self.targetLang = targetLang
     }
 
     /// Seeds the thread with the tutor's onboarding greeting so chat picks up
@@ -77,6 +86,7 @@ final class ChatViewModel {
             suggestedReplies = reply.suggestedReplies
             // new_vocab auto-add to the deck lands once the SRS/`/v1/srs` +
             // `user_cards` seam exists (CLAUDE.md M5) — nothing to wire yet.
+            await ttsPlayer.speak(text: reply.replyTargetText, lang: targetLang)
         } catch let error as APIError {
             isTyping = false
             handleError(error)

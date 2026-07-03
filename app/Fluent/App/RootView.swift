@@ -23,7 +23,11 @@ struct RootView: View {
                 // daily words (M5) and camera (M7) exist. Chat is the only feature
                 // built so far, so it's the whole home surface for now.
                 NavigationStack {
-                    ChatView(tutorName: router.profile?.tutorName ?? "Tutor", seed: router.pendingChatSeed)
+                    ChatView(
+                        tutorName: router.profile?.tutorName ?? "Tutor",
+                        targetLang: router.profile?.targetLang ?? "de",
+                        seed: router.pendingChatSeed
+                    )
                 }
 
             case .launchFailed(let message):

@@ -124,6 +124,21 @@ nonisolated struct ChatRequest: Encodable, Sendable {
     }
 }
 
+// MARK: - TTS (worker-specific; mirrors POST /v1/tts, CLAUDE.md §6)
+
+nonisolated struct TTSRequest: Encodable, Sendable {
+    let text: String
+    let lang: String
+}
+
+nonisolated struct TTSResponse: Decodable, Sendable {
+    let audioURL: URL
+
+    enum CodingKeys: String, CodingKey {
+        case audioURL = "audio_url"
+    }
+}
+
 // MARK: - Scenario (shared/schemas/scenario.json)
 
 nonisolated struct Scenario: Codable, Identifiable, Hashable, Sendable {

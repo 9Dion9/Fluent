@@ -40,6 +40,42 @@ export async function callGatewayChat(
   }
 }
 
+const TTS_TIMEOUT_MS = 15_000;
+
+/**
+ * Calls the gateway's /v1/tts (Piper -> ffmpeg AAC) and returns the raw
+ * .m4a bytes. One retry on failure per CLAUDE.md §2 ("1 retry on /tts") —
+ * unlike /v1/chat, re-synthesizing the same text is safe and idempotent.
+ */
+export async function callGatewayTTS(env: Env, text: string, lang: string): Promise<ArrayBuffer> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${env.GATEWAY_URL}/v1/tts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Gateway-Secret": env.GATEWAY_SHARED_SECRET,
+        },
+        body: JSON.stringify({ text, lang }),
+        signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
+      });
+
+      if (!res.ok) {
+        throw new GatewayCallError(`gateway /v1/tts returned ${res.status}`);
+      }
+
+      const audio = await res.arrayBuffer();
+      await recordGatewayResult(env, true);
+      return audio;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  await recordGatewayResult(env, false);
+  throw new GatewayCallError(String(lastError));
+}
+
 const HEALTH_CACHE_KEY = "gw:health";
 // KV enforces a 60s minimum TTL. CLAUDE.md §2 specs a 30s cache; 60s is the
 // closest we can get without rolling a custom expiry check on read.

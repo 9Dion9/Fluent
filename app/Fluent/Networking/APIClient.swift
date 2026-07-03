@@ -88,6 +88,17 @@ actor APIClient {
         )
     }
 
+    // MARK: TTS
+
+    func requestTTS(text: String, lang: String) async throws -> URL {
+        let response: TTSResponse = try await request(
+            path: "/v1/tts",
+            method: "POST",
+            body: TTSRequest(text: text, lang: lang)
+        )
+        return response.audioURL
+    }
+
     // MARK: Core request plumbing
 
     private func request<Body: Encodable, Response: Decodable>(

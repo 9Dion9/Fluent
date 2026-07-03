@@ -65,6 +65,11 @@ export const chatRequestSchema = z.object({
   text: z.string().min(1),
 });
 
+export const ttsRequestSchema = z.object({
+  text: z.string().min(1).max(400), // CLAUDE.md §6: "text <= 400 chars"
+  lang: z.string().min(2).max(5),
+});
+
 export const quizSchema = z.object({
   id: z.string(),
   lang: z.string().min(2).max(5),

@@ -4,18 +4,21 @@
 //
 //  DESIGN.md §8 "Chat" — clean thread, corrections collapsed under the tutor
 //  bubble, suggested-reply chips above the input, tutor-napping degraded state.
-//  Voice (mic button, walkie-talkie mode) is M4 — the input is text-only here.
+//  Mic button toggles walkie-talkie mode: hold to record, on-device STT,
+//  release to send; reply audio auto-plays with a mute toggle (CLAUDE.md §8).
 //
 
 import SwiftUI
 
 struct ChatView: View {
     @State private var viewModel: ChatViewModel
+    @State private var voiceRecorder = VoiceRecorder()
     @State private var draft = ""
+    @State private var micUnavailableHint = false
     @FocusState private var inputFocused: Bool
 
-    init(tutorName: String, seed: OnboardingChatExchange? = nil) {
-        let model = ChatViewModel(tutorName: tutorName)
+    init(tutorName: String, targetLang: String, seed: OnboardingChatExchange? = nil) {
+        let model = ChatViewModel(tutorName: tutorName, targetLang: targetLang)
         if let seed {
             model.seed(from: seed)
         }
@@ -39,6 +42,15 @@ struct ChatView: View {
 
                         if viewModel.isTyping {
                             TypingIndicator()
+                        }
+
+                        if voiceRecorder.isRecording {
+                            HStack(spacing: Theme.Spacing.sm) {
+                                Text(voiceRecorder.transcript.isEmpty ? "Listening…" : voiceRecorder.transcript)
+                                    .font(Theme.Font.body(15))
+                                    .foregroundStyle(Theme.Colors.inkSoft)
+                            }
+                            .padding(.horizontal, Theme.Spacing.lg)
                         }
 
                         if viewModel.isTutorNapping {
@@ -67,10 +79,31 @@ struct ChatView: View {
                 .padding(.bottom, Theme.Spacing.sm)
             }
 
+            if micUnavailableHint {
+                Text("Voice isn't available right now — you can still type.")
+                    .font(Theme.Font.caption())
+                    .foregroundStyle(Theme.Colors.inkSoft)
+                    .padding(.bottom, Theme.Spacing.xs)
+            }
+
             inputBar
         }
         .background(Theme.Colors.bg)
         .navigationTitle(viewModel.tutorName)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.isMuted.toggle()
+                } label: {
+                    Image(systemName: viewModel.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .foregroundStyle(Theme.Colors.ink)
+                }
+                .accessibilityLabel(viewModel.isMuted ? "Unmute tutor voice" : "Mute tutor voice")
+            }
+        }
+        .task {
+            voiceRecorder.configure(forTargetLang: viewModel.targetLang)
+        }
     }
 
     private var inputBar: some View {
@@ -85,23 +118,50 @@ struct ChatView: View {
                         .fill(Theme.Colors.surface)
                 )
 
-            Button {
-                let text = draft
-                draft = ""
-                Task { await viewModel.send(text) }
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundStyle(draft.trimmingCharacters(in: .whitespaces).isEmpty ? Theme.Colors.inkSoft : Theme.Colors.accent)
+            if draft.trimmingCharacters(in: .whitespaces).isEmpty {
+                AudioWaveformButton(
+                    isRecording: voiceRecorder.isRecording,
+                    onHoldStart: startRecording,
+                    onHoldEnd: stopRecordingAndSend
+                )
+            } else {
+                Button {
+                    let text = draft
+                    draft = ""
+                    Task { await viewModel.send(text) }
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(Theme.Colors.accent)
+                }
             }
-            .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
         }
         .padding(Theme.Spacing.lg)
+    }
+
+    private func startRecording() {
+        Task {
+            if !voiceRecorder.isAvailable {
+                let granted = await voiceRecorder.requestPermissions()
+                guard granted else {
+                    micUnavailableHint = true
+                    return
+                }
+            }
+            micUnavailableHint = false
+            voiceRecorder.startRecording()
+        }
+    }
+
+    private func stopRecordingAndSend() {
+        let transcript = voiceRecorder.stopRecording()
+        guard !transcript.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        Task { await viewModel.send(transcript) }
     }
 }
 
 #Preview {
     NavigationStack {
-        ChatView(tutorName: "Emma")
+        ChatView(tutorName: "Emma", targetLang: "de")
     }
 }
