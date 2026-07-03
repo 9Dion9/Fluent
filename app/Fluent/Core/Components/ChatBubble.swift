@@ -5,6 +5,7 @@
 //  User right/surfaceAlt, tutor left/surface with avatar (DESIGN.md §7, §8).
 //
 
+import Combine
 import SwiftUI
 
 struct ChatBubble: View {

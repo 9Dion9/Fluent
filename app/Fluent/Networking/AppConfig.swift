@@ -7,7 +7,9 @@
 
 import Foundation
 
-enum AppConfig {
+/// `nonisolated` — read from `actor APIClient`'s isolation domain, not just MainActor
+/// (the project defaults every declaration to `@MainActor`; this opts out).
+nonisolated enum AppConfig {
     /// The Cloudflare Worker's base URL. Update once the Worker is deployed;
     /// see docs/RUNBOOK.md for the current dev tunnel / production URL.
     static let workerBaseURL = URL(string: "http://localhost:8787")!

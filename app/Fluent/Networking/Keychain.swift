@@ -9,7 +9,7 @@
 import Foundation
 import Security
 
-enum Keychain {
+nonisolated enum Keychain {
     private static let service = "app.fluent.device-auth"
 
     static func set(_ value: String, forKey key: String) {

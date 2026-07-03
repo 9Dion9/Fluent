@@ -9,7 +9,7 @@
 
 import Foundation
 
-enum APIError: Error, LocalizedError {
+nonisolated enum APIError: Error, LocalizedError, Sendable {
     case notAuthenticated
     case server(code: String, message: String, retryable: Bool)
     case transport(Error)

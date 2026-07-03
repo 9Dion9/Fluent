@@ -7,12 +7,17 @@
 //  file, in the same commit. FluentTests has a decoding test per schema
 //  fixture.
 //
+//  Every type here is `nonisolated` — the project defaults every declaration
+//  to `@MainActor` (SWIFT_DEFAULT_ACTOR_ISOLATION), but these are plain,
+//  Sendable data types decoded/encoded from inside `actor APIClient`'s own
+//  isolation domain, so they must opt out of the MainActor default.
+//
 
 import Foundation
 
 // MARK: - WordCard (shared/schemas/word-card.json)
 
-struct WordCard: Codable, Identifiable, Hashable {
+nonisolated struct WordCard: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let lang: String
     let word: String
@@ -48,7 +53,7 @@ struct WordCard: Codable, Identifiable, Hashable {
 
 // MARK: - Card (shared/schemas/card.json) — one row of the FSRS due queue
 
-struct Card: Codable, Identifiable, Hashable {
+nonisolated struct Card: Codable, Identifiable, Hashable, Sendable {
     let cardID: String
     let word: WordCard
     let dueAt: Int
@@ -72,14 +77,14 @@ struct Card: Codable, Identifiable, Hashable {
 
 // MARK: - ChatReply (shared/schemas/chat-reply.json)
 
-struct ChatReply: Codable, Hashable {
-    struct Correction: Codable, Hashable {
+nonisolated struct ChatReply: Codable, Hashable, Sendable {
+    nonisolated struct Correction: Codable, Hashable, Sendable {
         let original: String
         let corrected: String
         let explanation: String
     }
 
-    struct NewVocab: Codable, Hashable {
+    nonisolated struct NewVocab: Codable, Hashable, Sendable {
         let word: String
         let translation: String
         let example: String
@@ -102,7 +107,7 @@ struct ChatReply: Codable, Hashable {
 
 // MARK: - Scenario (shared/schemas/scenario.json)
 
-struct Scenario: Codable, Identifiable, Hashable {
+nonisolated struct Scenario: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let lang: String
     let title: String
@@ -121,8 +126,8 @@ struct Scenario: Codable, Identifiable, Hashable {
 
 // MARK: - Error contract (shared/schemas/error.json)
 
-struct APIErrorResponse: Codable {
-    struct ErrorBody: Codable {
+nonisolated struct APIErrorResponse: Codable, Sendable {
+    nonisolated struct ErrorBody: Codable, Sendable {
         let code: String
         let message: String
         let retryable: Bool
@@ -133,7 +138,7 @@ struct APIErrorResponse: Codable {
 
 // MARK: - Worker-specific (not in /shared — Fluent's own auth/profile contract)
 
-struct DeviceAuthResponse: Codable {
+nonisolated struct DeviceAuthResponse: Codable, Sendable {
     let userID: String
     let token: String
 
@@ -143,7 +148,7 @@ struct DeviceAuthResponse: Codable {
     }
 }
 
-struct Profile: Codable, Equatable {
+nonisolated struct Profile: Codable, Equatable, Sendable {
     let id: String
     var nativeLang: String
     var targetLang: String
@@ -172,7 +177,7 @@ struct Profile: Codable, Equatable {
     }
 }
 
-struct ProfileUpdate: Codable {
+nonisolated struct ProfileUpdate: Codable, Sendable {
     var nativeLang: String
     var targetLang: String
     var level: String
