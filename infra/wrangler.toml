@@ -7,13 +7,13 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "fluent-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "a51eea4d-cdf5-4795-a95c-bf7ea90be90f"
 migrations_dir = "migrations"
 
 # Fill in after `wrangler kv namespace create fluent-kv`.
 [[kv_namespaces]]
 binding = "KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "9d59d484186445a3b90063516c8d3629"
 
 # Fill in after `wrangler r2 bucket create fluent-audio`.
 [[r2_buckets]]
