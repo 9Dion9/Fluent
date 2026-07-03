@@ -33,6 +33,10 @@ xcuserdata/
 gateway/bin/
 gateway/voices/
 
+# batch: generated SQL/JSONL output + cached frequency lists (reproducible from source data)
+batch/output/
+batch/.cache/
+
 # editor
 .vscode/
 .idea/
