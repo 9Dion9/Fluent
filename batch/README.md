@@ -79,3 +79,52 @@ needed beyond that.
 
 Idempotent the same way as `seed_words`: `content_hash` is deterministic
 (`sha256(lang:type:word_id(s))`), `ON CONFLICT(content_hash) DO UPDATE`.
+
+## vision_labels
+
+Seeds `vision_labels` (M7, CLAUDE.md §9) — maps Vision-classifier-style labels to
+Wiktionary-verified `content_words`, so the camera lens's instant path (no gateway
+call) works for common household objects out of the box:
+
+```bash
+.venv/bin/python -m batch.run vision_labels --lang de [--dry-run]
+.venv/bin/python -m batch.run vision_labels --lang en [--dry-run]
+```
+
+**Curated, not exhaustive** — ~65 common household/office objects (cup, chair,
+table, phone, laptop, key, ...), each hand-mapped to its target-language word
+(e.g. "cup" -> "Tasse"). Apple's on-device classifier vocabulary isn't public, so
+there's no way to auto-generate a complete label list; this covers what's likely to
+come up in early manual testing. Gender/POS/IPA for each chosen word still come
+straight from Wiktionary via `stream_matching_entries` — same as `seed_words` — only
+the *which German word means "cup"* judgment call is manual, since the pipeline has
+no bilingual dictionary source to automate that.
+
+Everything this list misses falls through to the Gemma VLM fallback
+(`POST /v1/vision/identify` on the Worker, `POST /v1/vision` on the gateway) at
+request time — and a correct fallback identification **self-caches** into
+`vision_labels` for next time (see `worker/src/repos/vision.ts`
+`upsertVisionLabelMapping`), so real usage grows the instant-path coverage over time
+without another batch run.
+
+Output: `output/vision_labels_{lang}.sql` — inserts/updates `content_words` the same
+idempotent way as `seed_words` (`ON CONFLICT(lang,word) DO UPDATE`), then maps each
+label via a `SELECT id FROM content_words WHERE lang=... AND word=...` subquery
+(not a hardcoded id) so it resolves correctly even if the word already existed from
+an earlier `seed_words` run under a different row id.
+
+**Bug found and fixed while building this**: `wiktextract.py`'s cheap regex
+prefilter (`_WORD_FIELD_RE.search(line)`, before the `dry-run` mismatch) matched
+only the *first* `"word":` occurrence in a JSONL line — but many entries list
+`"descendants"`/`"derived"`/`"related"` (each containing their own nested `"word"`
+keys) *before* the entry's own top-level `"word"` field in kaikki's serialization
+order. That silently dropped legitimate words whose entry happened to have such a
+list first (e.g. "Tasse" has Finnish/Polish/Latvian descendants listed before its
+own `"word": "Tasse"`, so the old code matched "tassi" instead and dropped the real
+entry). Fixed to `findall` + verify against the authoritative `data.get("word")`
+after parsing. This means `seed_words`'s M5 output for both languages was very
+likely a strict undercount (dropped some legitimate frequency-list words) — not
+wrong data, just incomplete. Re-running `seed_words` with the fix would very likely
+add previously-missed words; not done automatically since M5's data is already live
+in production and re-seeding + re-pushing is a call for whoever's running the
+pipeline, not an automatic side effect of an unrelated M7 change.

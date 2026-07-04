@@ -40,6 +40,44 @@ export async function callGatewayChat(
   }
 }
 
+const VISION_TIMEOUT_MS = 30_000; // cold VLM load is a rare, accepted ~10s path (CLAUDE.md §3)
+
+export interface VisionResult {
+  word: string;
+  translation: string;
+  pos: string | null;
+  gender: string | null;
+  example: string | null;
+}
+
+/** Calls the gateway's /v1/vision (Gemma VLM) fallback. No retry — a slow cold load doesn't need doubling. */
+export async function callGatewayVision(env: Env, imageB64: string, targetLang: string): Promise<VisionResult> {
+  try {
+    const res = await fetch(`${env.GATEWAY_URL}/v1/vision`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Gateway-Secret": env.GATEWAY_SHARED_SECRET,
+      },
+      body: JSON.stringify({ image_b64: imageB64, target_lang: targetLang }),
+      signal: AbortSignal.timeout(VISION_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      await recordGatewayResult(env, false);
+      throw new GatewayCallError(`gateway /v1/vision returned ${res.status}`);
+    }
+
+    const data = (await res.json()) as VisionResult;
+    await recordGatewayResult(env, true);
+    return data;
+  } catch (err) {
+    if (err instanceof GatewayCallError) throw err;
+    await recordGatewayResult(env, false);
+    throw new GatewayCallError(String(err));
+  }
+}
+
 const TTS_TIMEOUT_MS = 15_000;
 
 /**

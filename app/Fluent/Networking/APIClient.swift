@@ -129,6 +129,16 @@ actor APIClient {
         return try await request(path: "/v1/quiz/next", method: "GET", body: Optional<String>.none, queryItems: queryItems)
     }
 
+    // MARK: Vision (camera lens)
+
+    func identifyVision(imageB64: String?, detectedLabel: String?) async throws -> WordCard {
+        try await request(
+            path: "/v1/vision/identify",
+            method: "POST",
+            body: VisionIdentifyRequest(imageB64: imageB64, detectedLabel: detectedLabel)
+        )
+    }
+
     // MARK: Core request plumbing
 
     private func request<Body: Encodable, Response: Decodable>(

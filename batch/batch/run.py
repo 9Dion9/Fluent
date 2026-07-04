@@ -6,6 +6,7 @@ import sys
 JOBS = {
     "seed_words": "batch.seed_words",
     "quiz_gen": "batch.quiz_gen",
+    "vision_labels": "batch.vision_labels",
 }
 
 
@@ -23,6 +24,10 @@ def main() -> None:
         from batch import quiz_gen
 
         quiz_gen.main()
+    elif args.job == "vision_labels":
+        from batch import vision_labels
+
+        vision_labels.main()
 
 
 if __name__ == "__main__":

@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     ollama_host: str = "http://localhost:11434"
     chat_model: str = "qwen3:14b"
     chat_timeout_s: float = 25.0
+    vision_model: str = "gemma4:12b"
+    vision_timeout_s: float = 30.0  # cold VLM load can take ~10s (CLAUDE.md §3)
 
     piper_bin: Path = GATEWAY_ROOT / "bin" / "piper" / "piper"
     voices_dir: Path = GATEWAY_ROOT / "voices"

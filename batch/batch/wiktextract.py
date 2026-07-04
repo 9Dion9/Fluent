@@ -191,16 +191,25 @@ def stream_matching_entries(lang: str, target_words: set[str]) -> dict[str, Word
         for line in response.iter_lines():
             if not line:
                 continue
-            match = _WORD_FIELD_RE.search(line)
-            if not match:
-                continue
-            word_lower = match.group(1).lower()
-            if word_lower not in target_words:
+            # Cheap prefilter before the expensive json.loads: use findall, not
+            # search+first-match. A line's *first* "word": occurrence is often
+            # inside a nested "descendants"/"derived"/"related" list that sits
+            # earlier in the JSON than the entry's own top-level "word" field
+            # (e.g. "Tasse"'s entry lists Finnish/Polish/Latvian descendants
+            # before its own "word" key) — search() silently matched the wrong
+            # word and dropped the real entry. findall + checking every
+            # candidate avoids that false negative; the authoritative check
+            # is still data.get("word") after parsing, below.
+            if not any(w.lower() in target_words for w in _WORD_FIELD_RE.findall(line)):
                 continue
 
             try:
                 data = json.loads(line)
             except json.JSONDecodeError:
+                continue
+
+            word_lower = data.get("word", "").lower()
+            if word_lower not in target_words:
                 continue
 
             if data.get("lang_code") != lang:

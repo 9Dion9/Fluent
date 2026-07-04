@@ -135,3 +135,12 @@ export const eventsSchema = z.array(
     at: z.number().int(),
   }),
 );
+
+export const visionIdentifyRequestSchema = z
+  .object({
+    image_b64: z.string().min(1).optional(),
+    detected_label: z.string().min(1).optional(),
+  })
+  .refine((v) => v.image_b64 || v.detected_label, {
+    message: "at least one of image_b64 or detected_label is required",
+  });

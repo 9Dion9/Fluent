@@ -282,6 +282,18 @@ nonisolated struct StreakUpdate: Decodable, Sendable {
     }
 }
 
+// MARK: - Vision (camera lens, CLAUDE.md §9)
+
+nonisolated struct VisionIdentifyRequest: Encodable, Sendable {
+    let imageB64: String?
+    let detectedLabel: String?
+
+    enum CodingKeys: String, CodingKey {
+        case imageB64 = "image_b64"
+        case detectedLabel = "detected_label"
+    }
+}
+
 // MARK: - Quiz (shared/schemas/quiz.json) — prompt/answer shape depends on `type`
 
 nonisolated struct Quiz: Decodable, Identifiable, Sendable {

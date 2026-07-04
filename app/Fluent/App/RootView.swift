@@ -47,6 +47,11 @@ struct RootView: View {
                         QuizContainerView()
                     }
                     .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
+
+                    NavigationStack {
+                        CameraView()
+                    }
+                    .tabItem { Label("Camera", systemImage: "camera.fill") }
                 }
                 .tint(Theme.Colors.accent)
 

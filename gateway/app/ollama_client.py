@@ -12,12 +12,13 @@ class OllamaError(Exception):
 
 
 async def chat(
-    messages: list[dict[str, str]],
+    messages: list[dict],
     *,
     model: str = settings.chat_model,
     json_format: bool = True,
     think: bool = False,
     keep_alive: str | int | None = None,
+    timeout_s: float | None = None,
 ) -> str:
     """Non-streaming chat completion. Returns the assistant message content."""
     payload: dict = {
@@ -32,7 +33,7 @@ async def chat(
         payload["keep_alive"] = keep_alive
 
     try:
-        async with httpx.AsyncClient(timeout=settings.chat_timeout_s) as client:
+        async with httpx.AsyncClient(timeout=timeout_s or settings.chat_timeout_s) as client:
             res = await client.post(f"{settings.ollama_host}/api/chat", json=payload)
             res.raise_for_status()
     except httpx.HTTPError as exc:
