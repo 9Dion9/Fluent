@@ -91,6 +91,79 @@ struct FluentTests {
         #expect(scenario.minLevel == "A1")
     }
 
+    @Test func decodesMCQQuizFixture() throws {
+        let json = """
+        {
+          "id": "q_11223344", "lang": "de", "type": "mcq",
+          "prompt": { "question": "What does \\"Tisch\\" mean?", "options": ["chair", "table", "window", "door"] },
+          "answer": { "correct_index": 1 },
+          "difficulty": 1, "word_ids": ["w_ab12cd34"]
+        }
+        """
+        let quiz = try decoder.decode(Quiz.self, from: Data(json.utf8))
+        guard case .mcq(let question, let options, let correctIndex) = quiz.content else {
+            Issue.record("expected .mcq content")
+            return
+        }
+        #expect(question.contains("Tisch"))
+        #expect(options.count == 4)
+        #expect(correctIndex == 1)
+        #expect(quiz.wordIDs == ["w_ab12cd34"])
+    }
+
+    // match/fillblank/order aren't in /shared/fixtures/quiz.json yet (only the
+    // mcq example is fixtured there) — these cover the shapes this app's own
+    // custom Quiz decoder expects from worker/src/routes/quiz.ts.
+    @Test func decodesMatchQuiz() throws {
+        let json = """
+        { "id": "q1", "lang": "de", "type": "match",
+          "prompt": { "left": ["Tisch", "Stuhl"], "right": ["chair", "table"] },
+          "answer": { "correct_pairs": [[0, 1], [1, 0]] },
+          "difficulty": 1, "word_ids": ["w1", "w2"] }
+        """
+        let quiz = try decoder.decode(Quiz.self, from: Data(json.utf8))
+        guard case .match(let left, let right, let correctPairs) = quiz.content else {
+            Issue.record("expected .match content")
+            return
+        }
+        #expect(left == ["Tisch", "Stuhl"])
+        #expect(right == ["chair", "table"])
+        #expect(correctPairs == [[0, 1], [1, 0]])
+    }
+
+    @Test func decodesFillBlankQuiz() throws {
+        let json = """
+        { "id": "q1", "lang": "de", "type": "fillblank",
+          "prompt": { "sentence": "Bitte nicht stören!", "blank_index": 1 },
+          "answer": { "correct_word": "nicht" },
+          "difficulty": 1, "word_ids": ["w1"] }
+        """
+        let quiz = try decoder.decode(Quiz.self, from: Data(json.utf8))
+        guard case .fillBlank(let sentence, let blankIndex, let correctWord) = quiz.content else {
+            Issue.record("expected .fillBlank content")
+            return
+        }
+        #expect(sentence == "Bitte nicht stören!")
+        #expect(blankIndex == 1)
+        #expect(correctWord == "nicht")
+    }
+
+    @Test func decodesOrderQuiz() throws {
+        let json = """
+        { "id": "q1", "lang": "de", "type": "order",
+          "prompt": { "tokens": ["und", "Kaffee", "Kuchen"] },
+          "answer": { "correct_order": [2, 0, 1] },
+          "difficulty": 1, "word_ids": ["w1"] }
+        """
+        let quiz = try decoder.decode(Quiz.self, from: Data(json.utf8))
+        guard case .order(let tokens, let correctOrder) = quiz.content else {
+            Issue.record("expected .order content")
+            return
+        }
+        #expect(tokens == ["und", "Kaffee", "Kuchen"])
+        #expect(correctOrder == [2, 0, 1])
+    }
+
     @Test func decodesErrorFixture() throws {
         let json = """
         { "error": { "code": "rate_limited", "message": "You've hit today's chat limit — come back tomorrow!", "retryable": false } }

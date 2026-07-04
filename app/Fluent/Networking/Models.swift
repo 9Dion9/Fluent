@@ -232,3 +232,129 @@ nonisolated struct ProfileUpdate: Codable, Sendable {
         case dailyGoal = "daily_goal"
     }
 }
+
+// MARK: - SRS review (CLAUDE.md §6 POST /v1/srs/review — batch, idempotent by client id)
+
+nonisolated struct ReviewSubmission: Encodable, Sendable {
+    let id: String
+    let cardID: String
+    let rating: Int // 1 again | 2 hard | 3 good | 4 easy
+    let elapsedMs: Int
+    let reviewedAt: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, rating
+        case cardID = "card_id"
+        case elapsedMs = "elapsed_ms"
+        case reviewedAt = "reviewed_at"
+    }
+}
+
+nonisolated struct ReviewResult: Decodable, Sendable {
+    let cardID: String
+    let nextDue: Int
+
+    enum CodingKeys: String, CodingKey {
+        case cardID = "card_id"
+        case nextDue = "next_due"
+    }
+}
+
+// MARK: - Daily (CLAUDE.md §6 GET /v1/daily, POST /v1/daily/complete)
+
+nonisolated struct DailySet: Decodable, Sendable {
+    let date: String
+    let words: [WordCard]
+    let completed: Bool
+}
+
+nonisolated struct DailyCompleteRequest: Encodable, Sendable {
+    let date: String
+}
+
+nonisolated struct StreakUpdate: Decodable, Sendable {
+    let streakCurrent: Int
+    let streakBest: Int
+
+    enum CodingKeys: String, CodingKey {
+        case streakCurrent = "streak_current"
+        case streakBest = "streak_best"
+    }
+}
+
+// MARK: - Quiz (shared/schemas/quiz.json) — prompt/answer shape depends on `type`
+
+nonisolated struct Quiz: Decodable, Identifiable, Sendable {
+    enum Content: Sendable {
+        case mcq(question: String, options: [String], correctIndex: Int)
+        case match(left: [String], right: [String], correctPairs: [[Int]])
+        case fillBlank(sentence: String, blankIndex: Int, correctWord: String)
+        case order(tokens: [String], correctOrder: [Int])
+    }
+
+    let id: String
+    let lang: String
+    let difficulty: Int
+    let wordIDs: [String]
+    let content: Content
+
+    enum CodingKeys: String, CodingKey {
+        case id, lang, type, prompt, answer, difficulty
+        case wordIDs = "word_ids"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        lang = try container.decode(String.self, forKey: .lang)
+        difficulty = try container.decode(Int.self, forKey: .difficulty)
+        wordIDs = try container.decodeIfPresent([String].self, forKey: .wordIDs) ?? []
+
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "mcq":
+            let prompt = try container.decode(MCQPrompt.self, forKey: .prompt)
+            let answer = try container.decode(MCQAnswer.self, forKey: .answer)
+            content = .mcq(question: prompt.question, options: prompt.options, correctIndex: answer.correctIndex)
+        case "match":
+            let prompt = try container.decode(MatchPrompt.self, forKey: .prompt)
+            let answer = try container.decode(MatchAnswer.self, forKey: .answer)
+            content = .match(left: prompt.left, right: prompt.right, correctPairs: answer.correctPairs)
+        case "fillblank":
+            let prompt = try container.decode(FillBlankPrompt.self, forKey: .prompt)
+            let answer = try container.decode(FillBlankAnswer.self, forKey: .answer)
+            content = .fillBlank(sentence: prompt.sentence, blankIndex: prompt.blankIndex, correctWord: answer.correctWord)
+        case "order":
+            let prompt = try container.decode(OrderPrompt.self, forKey: .prompt)
+            let answer = try container.decode(OrderAnswer.self, forKey: .answer)
+            content = .order(tokens: prompt.tokens, correctOrder: answer.correctOrder)
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown quiz type: \(type)")
+        }
+    }
+
+    private struct MCQPrompt: Decodable { let question: String; let options: [String] }
+    private struct MCQAnswer: Decodable {
+        let correctIndex: Int
+        enum CodingKeys: String, CodingKey { case correctIndex = "correct_index" }
+    }
+    private struct MatchPrompt: Decodable { let left: [String]; let right: [String] }
+    private struct MatchAnswer: Decodable {
+        let correctPairs: [[Int]]
+        enum CodingKeys: String, CodingKey { case correctPairs = "correct_pairs" }
+    }
+    private struct FillBlankPrompt: Decodable {
+        let sentence: String
+        let blankIndex: Int
+        enum CodingKeys: String, CodingKey { case sentence; case blankIndex = "blank_index" }
+    }
+    private struct FillBlankAnswer: Decodable {
+        let correctWord: String
+        enum CodingKeys: String, CodingKey { case correctWord = "correct_word" }
+    }
+    private struct OrderPrompt: Decodable { let tokens: [String] }
+    private struct OrderAnswer: Decodable {
+        let correctOrder: [Int]
+        enum CodingKeys: String, CodingKey { case correctOrder = "correct_order" }
+    }
+}

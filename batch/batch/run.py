@@ -5,6 +5,7 @@ import sys
 
 JOBS = {
     "seed_words": "batch.seed_words",
+    "quiz_gen": "batch.quiz_gen",
 }
 
 
@@ -13,11 +14,15 @@ def main() -> None:
     parser.add_argument("job", choices=sorted(JOBS.keys()))
     args, remaining = parser.parse_known_args()
 
+    sys.argv = [sys.argv[0], *remaining]
     if args.job == "seed_words":
         from batch import seed_words
 
-        sys.argv = [sys.argv[0], *remaining]
         seed_words.main()
+    elif args.job == "quiz_gen":
+        from batch import quiz_gen
+
+        quiz_gen.main()
 
 
 if __name__ == "__main__":

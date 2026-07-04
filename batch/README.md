@@ -45,7 +45,37 @@ surface with use. `content_words.verified` is `1` for everything here since
 gender/POS/IPA themselves are genuinely Wiktionary-sourced, not LLM-invented — it
 does not mean "human-reviewed for translation accuracy."
 
-**Not yet built:** quiz-item generation (`/v1/generate`), audio pre-rendering to R2.
-The client already has a full TTS fallback chain (M4: Worker live-render + cache,
-on-device `AVSpeechSynthesizer`), so daily words/SRS work without pre-rendered audio
-— it's a cost optimization for later, not a blocker.
+**Not yet built:** audio pre-rendering to R2. The client already has a full TTS
+fallback chain (M4: Worker live-render + cache, on-device `AVSpeechSynthesizer`), so
+daily words/SRS work without pre-rendered audio — it's a cost optimization for
+later, not a blocker.
+
+## quiz_gen
+
+Seeds `quizzes` per `shared/schemas/quiz.json`'s documented shape (M6). Run after
+`seed_words` for the same language — it reads that job's `.jsonl` output:
+
+```bash
+.venv/bin/python -m batch.run quiz_gen --lang de --mcq-count 100 [--dry-run]
+```
+
+Three of the four quiz types are built **deterministically from already
+Wiktionary-verified data — zero LLM cost, zero hallucination risk**:
+- `match`: groups of 4 words paired against their (shuffled) translations.
+- `fillblank`: the word blanked out of its own real Wiktionary example sentence.
+- `order`: a real example sentence's words shuffled, user rebuilds it.
+
+Only `mcq` genuinely needs the LLM (`gpt-oss:20b`, CLAUDE.md §3's batch model) — the
+data doesn't provide plausible *wrong* answer options, which is what multiple-choice
+needs. Deliberate simplification vs. CLAUDE.md §3's sketch: reuses the gateway's
+existing generic `/v1/chat` (with a `model` override) instead of standing up a
+separate `/v1/generate` endpoint — `/v1/chat` was already generic enough, so a
+near-duplicate route would have been pure overhead.
+
+Reads `GATEWAY_SHARED_SECRET` straight from `infra/.dev.vars` and calls
+`http://127.0.0.1:8000` directly (this job runs on the same box as the gateway,
+unlike the Worker which goes through the tunnel) — no `X-Gateway-Secret` handling
+needed beyond that.
+
+Idempotent the same way as `seed_words`: `content_hash` is deterministic
+(`sha256(lang:type:word_id(s))`), `ON CONFLICT(content_hash) DO UPDATE`.

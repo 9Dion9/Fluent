@@ -7,6 +7,7 @@ import { chatRoute } from "./routes/chat";
 import { dailyRoute } from "./routes/daily";
 import { healthRoute } from "./routes/health";
 import { profileRoute } from "./routes/profile";
+import { quizRoute } from "./routes/quiz";
 import { srsRoute } from "./routes/srs";
 import { ttsRoute } from "./routes/tts";
 
@@ -24,8 +25,9 @@ v1.route("/tts", ttsRoute); // authenticate middleware applied inside ttsRoute
 v1.route("/audio", audioRoute); // deliberately unauthenticated — see routes/audio.ts
 v1.route("/srs", srsRoute); // authenticate middleware applied inside srsRoute
 v1.route("/daily", dailyRoute); // authenticate middleware applied inside dailyRoute
+v1.route("/quiz", quizRoute); // authenticate middleware applied inside quizRoute
 
-// quiz, scenarios, vision, events routes land in M6+ per CLAUDE.md build order.
+// scenarios, vision, events routes land in M7+ per CLAUDE.md build order.
 
 app.route("/v1", v1);
 

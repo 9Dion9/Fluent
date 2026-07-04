@@ -99,15 +99,53 @@ actor APIClient {
         return response.audioURL
     }
 
+    // MARK: SRS
+
+    func getDueCards() async throws -> [Card] {
+        try await request(path: "/v1/srs/due", method: "GET", body: Optional<String>.none)
+    }
+
+    func submitReviews(_ reviews: [ReviewSubmission]) async throws -> [ReviewResult] {
+        try await request(path: "/v1/srs/review", method: "POST", body: reviews)
+    }
+
+    // MARK: Daily
+
+    func getDaily() async throws -> DailySet {
+        try await request(path: "/v1/daily", method: "GET", body: Optional<String>.none)
+    }
+
+    func completeDaily(date: String) async throws -> StreakUpdate {
+        try await request(path: "/v1/daily/complete", method: "POST", body: DailyCompleteRequest(date: date))
+    }
+
+    // MARK: Quiz
+
+    func getNextQuiz(types: [String] = []) async throws -> Quiz {
+        var queryItems: [URLQueryItem] = []
+        if !types.isEmpty {
+            queryItems.append(URLQueryItem(name: "types", value: types.joined(separator: ",")))
+        }
+        return try await request(path: "/v1/quiz/next", method: "GET", body: Optional<String>.none, queryItems: queryItems)
+    }
+
     // MARK: Core request plumbing
 
     private func request<Body: Encodable, Response: Decodable>(
         path: String,
         method: String,
         body: Body?,
-        authenticated: Bool = true
+        authenticated: Bool = true,
+        queryItems: [URLQueryItem] = []
     ) async throws -> Response {
-        var urlRequest = URLRequest(url: baseURL.appendingPathComponent(path))
+        var url = baseURL.appendingPathComponent(path)
+        if !queryItems.isEmpty, var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            components.queryItems = queryItems
+            if let composedURL = components.url {
+                url = composedURL
+            }
+        }
+        var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = method
 
         if authenticated {

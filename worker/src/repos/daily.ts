@@ -1,4 +1,5 @@
 import type { Env } from "../env";
+import { cefrsUpTo, LEVEL_CEFR_CEILING } from "../cefr";
 import type { ContentWordRow } from "./srs";
 
 export interface DailySetRow {
@@ -10,20 +11,6 @@ export interface DailySetRow {
 }
 
 const DAILY_WORD_COUNT = 10;
-
-// CLAUDE.md §10: "CEFR <= user level" — order matches content_words.cefr's A1..C1 scale.
-const CEFR_ORDER = ["A1", "A2", "B1", "B2", "C1"];
-const LEVEL_CEFR_CEILING: Record<string, string> = {
-  beginner: "A2",
-  elementary: "B1",
-  intermediate: "B2",
-  advanced: "C1",
-};
-
-function cefrsUpTo(ceiling: string): string[] {
-  const idx = CEFR_ORDER.indexOf(ceiling);
-  return CEFR_ORDER.slice(0, idx === -1 ? CEFR_ORDER.length : idx + 1);
-}
 
 export async function getDailySet(env: Env, userId: string, date: string): Promise<DailySetRow | null> {
   return env.DB.prepare("SELECT * FROM daily_sets WHERE user_id = ? AND date = ?").bind(userId, date).first<DailySetRow>();
