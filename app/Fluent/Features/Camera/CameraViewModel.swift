@@ -90,7 +90,12 @@ final class CameraViewModel {
         let scale = min(1, maxUploadDimension / longEdge)
         let targetSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
 
-        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        // UIGraphicsImageRenderer defaults to the device's screen scale (3x on
+        // most iPhones) when given only a size — without forcing scale=1,
+        // "768pt" actually rendered at ~2304px, three times the intended cap.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
         let resized = renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: targetSize))
         }
