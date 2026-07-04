@@ -10,7 +10,6 @@
 
 import UIKit
 import Vision
-import os
 
 @Observable
 final class CameraViewModel {
@@ -28,9 +27,6 @@ final class CameraViewModel {
     private static let maxUploadDimension: CGFloat = 768
 
     private let apiClient: APIClient
-    // TEMPORARY diagnostic logging (see docs/RUNBOOK.md "camera repeats last
-    // object" investigation) — remove once the root cause is confirmed.
-    private static let debugLog = Logger(subsystem: "com.fluent.app", category: "camera-debug")
 
     init(apiClient: APIClient = .shared) {
         self.apiClient = apiClient
@@ -54,16 +50,12 @@ final class CameraViewModel {
 
         let (label, confidence) = await Self.classify(image)
         let detectedLabel = confidence >= Self.confidenceThreshold ? label : nil
-        Self.debugLog.debug(
-            "capture: jpegBytes=\(jpeg.count) visionLabel=\(label ?? "nil") confidence=\(confidence) sentLabel=\(detectedLabel ?? "nil (image-only)")"
-        )
 
         do {
             let word = try await apiClient.identifyVision(
                 imageB64: jpeg.base64EncodedString(),
                 detectedLabel: detectedLabel
             )
-            Self.debugLog.debug("result: word=\(word.word) source=\(word.source ?? "nil") id=\(word.id)")
             state = .caught(word)
         } catch {
             state = .failed((error as? APIError)?.errorDescription ?? "Couldn't identify that — try again.")
