@@ -24,9 +24,16 @@ final class ChatViewModel {
     private(set) var suggestedReplies: [String] = []
     private(set) var isTyping = false
     private(set) var isTutorNapping = false
+    /// Set by `selectScenario` and shown as a small banner above the input
+    /// (DESIGN.md §8's "scenario picker") until the roleplay conversation ends.
+    private(set) var activeScenario: Scenario?
     var errorMessage: String?
 
     private var conversationID: String?
+    /// Only sent on the *next* message when starting a fresh conversation —
+    /// once the Worker has attached a scenario to a `conversation_id` it
+    /// stays attached server-side, no need to keep resending it.
+    private var pendingScenarioID: String?
     private let apiClient: APIClient
     private let ttsPlayer: TTSPlayer
     let tutorName: String
@@ -67,6 +74,22 @@ final class ChatViewModel {
         suggestedReplies = onboardingExchange.suggestedReplies
     }
 
+    /// Starts a fresh, scenario-scoped roleplay conversation (DESIGN.md §8's
+    /// scenario picker) — clears the current thread; the scenario is attached
+    /// to whatever conversation the user's next message creates.
+    func selectScenario(_ scenario: Scenario) {
+        messages = []
+        suggestedReplies = []
+        conversationID = nil
+        pendingScenarioID = scenario.id
+        activeScenario = scenario
+    }
+
+    func clearScenario() {
+        activeScenario = nil
+        pendingScenarioID = nil
+    }
+
     func send(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -79,8 +102,9 @@ final class ChatViewModel {
         errorMessage = nil
 
         do {
-            let reply = try await apiClient.sendChat(text: trimmed, conversationID: conversationID)
+            let reply = try await apiClient.sendChat(text: trimmed, conversationID: conversationID, scenarioID: pendingScenarioID)
             conversationID = reply.conversationID
+            pendingScenarioID = nil
             isTyping = false
             messages.append(MessageItem(role: .tutor, text: reply.reply, corrections: reply.corrections))
             suggestedReplies = reply.suggestedReplies

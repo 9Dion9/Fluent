@@ -69,6 +69,17 @@ export async function getScenario(env: Env, scenarioId: string): Promise<Scenari
   return env.DB.prepare("SELECT * FROM scenarios WHERE id = ?").bind(scenarioId).first<ScenarioRow>();
 }
 
+/** Scenario picker shelf (DESIGN.md §8) — filtered by lang + the user's level ceiling. */
+export async function listScenarios(env: Env, lang: string, maxCefrs: string[]): Promise<ScenarioRow[]> {
+  const placeholders = maxCefrs.map(() => "?").join(",");
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM scenarios WHERE lang = ? AND min_level IN (${placeholders}) ORDER BY min_level ASC`,
+  )
+    .bind(lang, ...maxCefrs)
+    .all<ScenarioRow>();
+  return results;
+}
+
 export async function getRecentMessages(env: Env, conversationId: string, limit: number): Promise<MessageRow[]> {
   const { results } = await env.DB.prepare(
     "SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT ?",

@@ -16,7 +16,9 @@ struct ChatView: View {
     @State private var draft = ""
     @State private var micUnavailableHint = false
     @State private var showErrorToast = false
+    @State private var scenarios: [Scenario] = []
     @FocusState private var inputFocused: Bool
+    private let apiClient: APIClient = .shared
 
     init(tutorName: String, targetLang: String, seed: OnboardingChatExchange? = nil) {
         let model = ChatViewModel(tutorName: tutorName, targetLang: targetLang)
@@ -28,6 +30,13 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if !scenarios.isEmpty {
+                scenarioShelf
+            }
+            if let scenario = viewModel.activeScenario {
+                activeScenarioBanner(scenario)
+            }
+
             ScrollViewReader { scrollProxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Theme.Spacing.md) {
@@ -110,6 +119,7 @@ struct ChatView: View {
         }
         .task {
             voiceRecorder.configure(forTargetLang: viewModel.targetLang)
+            scenarios = (try? await apiClient.getScenarios()) ?? []
         }
         .toast(isPresented: $showErrorToast, message: viewModel.errorMessage ?? "", systemImage: "exclamationmark.triangle.fill")
         .onChange(of: viewModel.errorMessage) {
@@ -117,6 +127,46 @@ struct ChatView: View {
             // only toast for everything else (e.g. an empty voice transcript).
             showErrorToast = viewModel.errorMessage != nil && !viewModel.isTutorNapping
         }
+    }
+
+    /// DESIGN.md §8: "Scenario picker as a horizontal shelf."
+    private var scenarioShelf: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Theme.Spacing.sm) {
+                ForEach(scenarios) { scenario in
+                    let isActive = viewModel.activeScenario?.id == scenario.id
+                    Button {
+                        Theme.Haptic.chipTap()
+                        viewModel.selectScenario(scenario)
+                    } label: {
+                        Text("\(scenario.emoji ?? "") \(scenario.title)")
+                            .font(Theme.Font.body(14, weight: .medium))
+                            .padding(.horizontal, Theme.Spacing.md)
+                            .padding(.vertical, Theme.Spacing.sm)
+                            .background(Capsule().fill(isActive ? Theme.Colors.accent : Theme.Colors.surfaceAlt))
+                            .foregroundStyle(isActive ? .white : Theme.Colors.ink)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+        }
+        .padding(.vertical, Theme.Spacing.xs)
+    }
+
+    private func activeScenarioBanner(_ scenario: Scenario) -> some View {
+        HStack {
+            Text("Roleplaying: \(scenario.emoji ?? "") \(scenario.title)")
+                .font(Theme.Font.caption())
+                .foregroundStyle(Theme.Colors.inkSoft)
+            Spacer()
+            Button("End") { viewModel.clearScenario() }
+                .font(Theme.Font.caption())
+                .fontWeight(.semibold)
+                .foregroundStyle(Theme.Colors.sky)
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.bottom, Theme.Spacing.xs)
     }
 
     private var inputBar: some View {

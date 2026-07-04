@@ -290,6 +290,25 @@ nonisolated struct EventPayload: Encodable, Sendable {
     let at: Int
 }
 
+// MARK: - Scenario (shared/schemas/scenario.json) — Chat's scenario picker (DESIGN.md §8)
+
+nonisolated struct Scenario: Decodable, Identifiable, Hashable, Sendable {
+    let id: String
+    let lang: String
+    let title: String
+    let emoji: String?
+    let minLevel: String
+    let seedPrompt: String
+    let focusWordIDs: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case id, lang, title, emoji
+        case minLevel = "min_level"
+        case seedPrompt = "seed_prompt"
+        case focusWordIDs = "focus_word_ids"
+    }
+}
+
 // MARK: - Vision (camera lens, CLAUDE.md §9)
 
 nonisolated struct VisionIdentifyRequest: Encodable, Sendable {

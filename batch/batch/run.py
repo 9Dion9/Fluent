@@ -8,6 +8,7 @@ JOBS = {
     "quiz_gen": "batch.quiz_gen",
     "vision_labels": "batch.vision_labels",
     "report": "batch.report",
+    "scenarios": "batch.scenarios",
 }
 
 
@@ -33,6 +34,10 @@ def main() -> None:
         from batch import report
 
         report.main()
+    elif args.job == "scenarios":
+        from batch import scenarios
+
+        scenarios.main()
 
 
 if __name__ == "__main__":

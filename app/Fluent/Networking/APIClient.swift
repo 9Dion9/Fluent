@@ -129,6 +129,12 @@ actor APIClient {
         return try await request(path: "/v1/quiz/next", method: "GET", body: Optional<String>.none, queryItems: queryItems)
     }
 
+    // MARK: Scenarios
+
+    func getScenarios() async throws -> [Scenario] {
+        try await request(path: "/v1/scenarios", method: "GET", body: Optional<String>.none)
+    }
+
     // MARK: Vision (camera lens)
 
     func identifyVision(imageB64: String?, detectedLabel: String?) async throws -> WordCard {

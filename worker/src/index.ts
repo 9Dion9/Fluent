@@ -9,6 +9,7 @@ import { eventsRoute } from "./routes/events";
 import { healthRoute } from "./routes/health";
 import { profileRoute } from "./routes/profile";
 import { quizRoute } from "./routes/quiz";
+import { scenariosRoute } from "./routes/scenarios";
 import { srsRoute } from "./routes/srs";
 import { ttsRoute } from "./routes/tts";
 import { visionRoute } from "./routes/vision";
@@ -30,8 +31,7 @@ v1.route("/daily", dailyRoute); // authenticate middleware applied inside dailyR
 v1.route("/quiz", quizRoute); // authenticate middleware applied inside quizRoute
 v1.route("/vision", visionRoute); // authenticate middleware applied inside visionRoute
 v1.route("/events", eventsRoute); // authenticate middleware applied inside eventsRoute
-
-// scenarios land in a later milestone per CLAUDE.md build order.
+v1.route("/scenarios", scenariosRoute); // authenticate middleware applied inside scenariosRoute
 
 app.route("/v1", v1);
 
