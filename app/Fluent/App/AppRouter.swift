@@ -54,6 +54,14 @@ final class AppRouter {
         screen = .home
     }
 
+    /// Dev/testing affordance (no CLAUDE.md-specced Settings screen exists yet):
+    /// re-runs onboarding against the SAME device/user — no re-auth, no data
+    /// loss, just re-collects native/target language, level, interests, etc.
+    /// and PUTs them onto the existing profile, e.g. to switch target language.
+    func resetOnboarding() {
+        screen = .onboarding
+    }
+
     /// The schema has no explicit `onboarding_completed` flag. Interests are
     /// required (min 2, DESIGN.md §9.6) and default to empty at account
     /// creation, so a non-empty interests list is a reliable "has onboarded"

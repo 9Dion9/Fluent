@@ -52,6 +52,11 @@ struct RootView: View {
                         CameraView()
                     }
                     .tabItem { Label("Camera", systemImage: "camera.fill") }
+
+                    NavigationStack {
+                        SettingsView(router: router)
+                    }
+                    .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 }
                 .tint(Theme.Colors.accent)
 
