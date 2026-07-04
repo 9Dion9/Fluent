@@ -40,3 +40,4 @@ batch/.cache/
 # editor
 .vscode/
 .idea/
+infra/.cf_token
