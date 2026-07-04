@@ -54,19 +54,22 @@ final class CameraController: NSObject {
     }
 
     /// Captures one still image. Resolves `nil` if capture failed.
+    ///
+    /// Deliberately does NOT hop to `sessionQueue` here (unlike `start()`/`stop()`,
+    /// which block and belong off the main thread) — `capturePhoto(with:delegate:)`
+    /// is safe to call directly, and calling it matters, since this method runs on
+    /// MainActor (the project's default isolation): storing `photoContinuation`
+    /// synchronously *before* the call, on the same actor, is what guarantees the
+    /// delegate callback below can never fire before it's stored. An earlier
+    /// version stored it via a separately-scheduled `Task { @MainActor in ... }`
+    /// after already starting the capture — a real race where a fast camera
+    /// response could fire the delegate while `photoContinuation` was still nil,
+    /// silently dropping the result and leaving the `await` hung forever.
     func capturePhoto() async -> UIImage? {
         await withCheckedContinuation { continuation in
-            sessionQueue.async { [weak self] in
-                guard let self else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                Task { @MainActor in
-                    self.photoContinuation = continuation
-                }
-                let settings = AVCapturePhotoSettings()
-                self.photoOutput.capturePhoto(with: settings, delegate: self)
-            }
+            photoContinuation = continuation
+            let settings = AVCapturePhotoSettings()
+            photoOutput.capturePhoto(with: settings, delegate: self)
         }
     }
 
