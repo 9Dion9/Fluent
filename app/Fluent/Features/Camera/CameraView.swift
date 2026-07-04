@@ -126,7 +126,7 @@ struct CameraView: View {
 
     private func capture() async {
         guard let image = await controller.capturePhoto() else {
-            viewModel.state = .failed("Couldn't take that photo — try again.")
+            viewModel.fail("Couldn't take that photo — try again.")
             return
         }
         await viewModel.identify(image)

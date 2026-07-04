@@ -36,6 +36,10 @@ final class CameraViewModel {
         state = .idle
     }
 
+    func fail(_ message: String) {
+        state = .failed(message)
+    }
+
     func identify(_ image: UIImage) async {
         state = .identifying
 
