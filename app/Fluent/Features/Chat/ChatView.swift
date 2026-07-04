@@ -71,6 +71,8 @@ struct ChatView: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
+            .onTapGesture { inputFocused = false }
 
             if !viewModel.suggestedReplies.isEmpty {
                 SuggestionChips(suggestions: viewModel.suggestedReplies) { suggestion in
@@ -100,6 +102,10 @@ struct ChatView: View {
                         .foregroundStyle(Theme.Colors.ink)
                 }
                 .accessibilityLabel(viewModel.isMuted ? "Unmute tutor voice" : "Mute tutor voice")
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { inputFocused = false }
             }
         }
         .task {
