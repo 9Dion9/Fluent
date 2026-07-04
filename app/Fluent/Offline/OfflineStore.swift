@@ -51,7 +51,8 @@ final class OfflineStore {
     // MARK: Daily set
 
     func cacheDailySet(_ set: DailySet) {
-        let existing = try? context.fetch(FetchDescriptor<CachedDailySet>(predicate: #Predicate { $0.date == set.date }))
+        let targetDate = set.date // #Predicate can't resolve a member access on a captured struct directly
+        let existing = try? context.fetch(FetchDescriptor<CachedDailySet>(predicate: #Predicate { $0.date == targetDate }))
         existing?.forEach { context.delete($0) }
         context.insert(CachedDailySet(set))
         try? context.save()
