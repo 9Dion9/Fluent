@@ -66,7 +66,16 @@ final class CameraController: NSObject {
     /// response could fire the delegate while `photoContinuation` was still nil,
     /// silently dropping the result and leaving the `await` hung forever.
     func capturePhoto() async -> UIImage? {
-        await withCheckedContinuation { continuation in
+        // Without this, AVCapturePhotoOutput's connection defaults to landscape
+        // framing — every still comes back rotated 90° from what the viewfinder
+        // showed. A sideways/upside-down photo is a plausible reason a VLM
+        // misidentifies an otherwise-recognizable object (CLAUDE.md §9 assumes
+        // portrait-held capture throughout).
+        if let connection = photoOutput.connection(with: .video), connection.isVideoRotationAngleSupported(90) {
+            connection.videoRotationAngle = 90
+        }
+
+        return await withCheckedContinuation { continuation in
             photoContinuation = continuation
             let settings = AVCapturePhotoSettings()
             photoOutput.capturePhoto(with: settings, delegate: self)
