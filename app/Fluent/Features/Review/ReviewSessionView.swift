@@ -89,6 +89,20 @@ struct ReviewSessionView: View {
             } else {
                 EmptyStateView(message: "Nothing due for review right now — check back later.")
             }
+
+            Button {
+                showConfetti = false
+                Task { await viewModel.reload() }
+            } label: {
+                Text("Done")
+                    .font(Theme.Font.body(17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(RoundedRectangle(cornerRadius: Theme.Radius.button, style: .continuous).fill(Theme.Colors.accent))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, Theme.Spacing.lg)
         }
         .padding(Theme.Spacing.xl)
     }

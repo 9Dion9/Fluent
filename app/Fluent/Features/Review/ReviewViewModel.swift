@@ -47,6 +47,15 @@ final class ReviewViewModel {
         isFinished = cards.isEmpty
     }
 
+    /// Re-checks the due queue from the summary screen — without this, the
+    /// summary is a dead end since `isFinished` never resets on its own.
+    func reload() async {
+        currentIndex = 0
+        reviewedCount = 0
+        isFinished = false
+        await load()
+    }
+
     /// rating: 1 again | 2 hard | 3 good | 4 easy (DESIGN.md §8 rating buttons).
     func rate(_ rating: Int) async {
         guard let card = currentCard else { return }
