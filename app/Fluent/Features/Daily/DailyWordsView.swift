@@ -21,7 +21,7 @@ struct DailyWordsView: View {
                 if viewModel.isLoading {
                     ProgressView().tint(Theme.Colors.accent).padding(.top, Theme.Spacing.xxl)
                 } else if let dailySet = viewModel.dailySet {
-                    Text(dailySet.date)
+                    Text(viewModel.isOffline ? "\(dailySet.date) — offline, showing cached words" : dailySet.date)
                         .font(Theme.Font.caption())
                         .foregroundStyle(Theme.Colors.inkSoft)
                         .padding(.top, Theme.Spacing.lg)

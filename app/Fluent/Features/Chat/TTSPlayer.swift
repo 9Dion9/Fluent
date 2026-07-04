@@ -26,9 +26,14 @@ final class TTSPlayer {
     func speak(text: String, lang: String) async {
         guard !isMuted, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
+        if let cached = AudioFileCache.read(text: text, lang: lang), (try? playRemoteAudio(cached)) != nil {
+            return // free, offline replay — no network touched (CLAUDE.md §8)
+        }
+
         do {
             let url = try await apiClient.requestTTS(text: text, lang: lang)
             let (data, _) = try await URLSession.shared.data(from: url)
+            AudioFileCache.write(data, text: text, lang: lang)
             try playRemoteAudio(data)
         } catch {
             speakOnDevice(text: text, lang: lang)

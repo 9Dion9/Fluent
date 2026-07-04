@@ -104,6 +104,9 @@ struct OnboardingContainerView: View {
         }, message: {
             Text(saveError ?? "")
         })
+        .task {
+            EventsClient.shared.log("onboarding_step", props: ["step": String(describing: OnboardingStep.welcome)])
+        }
     }
 
     /// No back nav on Welcome (nothing before it) or FirstMessage (a real
@@ -113,7 +116,11 @@ struct OnboardingContainerView: View {
     }
 
     private func advance() {
+        if step == .placement {
+            EventsClient.shared.log("placement_done")
+        }
         guard let next = OnboardingStep(rawValue: step.rawValue + 1) else { return }
+        EventsClient.shared.log("onboarding_step", props: ["step": String(describing: next)])
         withAnimation(Theme.Motion.spring) { step = next }
     }
 

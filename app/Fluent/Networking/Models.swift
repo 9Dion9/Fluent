@@ -282,6 +282,14 @@ nonisolated struct StreakUpdate: Decodable, Sendable {
     }
 }
 
+// MARK: - Events (analytics, CLAUDE.md §14)
+
+nonisolated struct EventPayload: Encodable, Sendable {
+    let name: String
+    let props: [String: String]?
+    let at: Int
+}
+
 // MARK: - Vision (camera lens, CLAUDE.md §9)
 
 nonisolated struct VisionIdentifyRequest: Encodable, Sendable {

@@ -57,6 +57,7 @@ final class CameraViewModel {
                 detectedLabel: detectedLabel
             )
             state = .caught(word)
+            EventsClient.shared.log("camera_snap", props: ["source": word.source ?? "unknown"])
         } catch {
             state = .failed((error as? APIError)?.errorDescription ?? "Couldn't identify that — try again.")
         }

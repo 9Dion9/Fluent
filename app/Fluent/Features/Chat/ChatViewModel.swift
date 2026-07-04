@@ -84,6 +84,11 @@ final class ChatViewModel {
             isTyping = false
             messages.append(MessageItem(role: .tutor, text: reply.reply, corrections: reply.corrections))
             suggestedReplies = reply.suggestedReplies
+            EventsClient.shared.log("chat_turn")
+            if !UserDefaults.standard.bool(forKey: "hasSentFirstChatTurn") {
+                UserDefaults.standard.set(true, forKey: "hasSentFirstChatTurn")
+                EventsClient.shared.log("first_chat_turn")
+            }
             // new_vocab auto-add to the deck lands once the SRS/`/v1/srs` +
             // `user_cards` seam exists (CLAUDE.md M5) — nothing to wire yet.
             await ttsPlayer.speak(text: reply.replyTargetText, lang: targetLang)

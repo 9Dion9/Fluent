@@ -41,3 +41,7 @@ batch/.cache/
 .vscode/
 .idea/
 infra/.cf_token
+
+# nightly D1 export backups (real user data — never commit)
+infra/backups/
+infra/.health_state/

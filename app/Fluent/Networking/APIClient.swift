@@ -139,6 +139,35 @@ actor APIClient {
         )
     }
 
+    // MARK: Events (analytics, CLAUDE.md §14)
+
+    func postEvents(_ events: [EventPayload]) async throws {
+        var urlRequest = URLRequest(url: baseURL.appendingPathComponent("/v1/events"))
+        urlRequest.httpMethod = "POST"
+        guard let bearerToken else { throw APIError.notAuthenticated }
+        urlRequest.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = try encoder.encode(events)
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: urlRequest)
+        } catch {
+            throw APIError.transport(error)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.transport(URLError(.badServerResponse))
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            if let errorBody = try? decoder.decode(APIErrorResponse.self, from: data) {
+                throw APIError.server(code: errorBody.error.code, message: errorBody.error.message, retryable: errorBody.error.retryable)
+            }
+            throw APIError.transport(URLError(.badServerResponse))
+        }
+    }
+
     // MARK: Core request plumbing
 
     private func request<Body: Encodable, Response: Decodable>(

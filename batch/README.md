@@ -128,3 +128,20 @@ wrong data, just incomplete. Re-running `seed_words` with the fix would very lik
 add previously-missed words; not done automatically since M5's data is already live
 in production and re-seeding + re-pushing is a call for whoever's running the
 pipeline, not an automatic side effect of an unrelated M7 change.
+
+## report
+
+Weekly retention/funnel report (M8, CLAUDE.md §14):
+
+```bash
+.venv/bin/python -m batch.run report --days 7          # local D1
+.venv/bin/python -m batch.run report --days 7 --remote  # production D1
+```
+
+Prints funnel event counts + distinct users for the tracked events
+(`onboarding_step`, `placement_done`, `first_chat_turn`, `chat_turn`,
+`daily_completed`, `review_done`, `camera_snap`, `streak_day`), a simple
+"active on 2+ distinct days" retention proxy, and streak distribution across
+users. Reads via `wrangler d1 execute --json` — same tool every other D1
+read/write in this project already uses, so no separate Cloudflare REST API
+client was wired up just for this.

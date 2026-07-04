@@ -5,6 +5,7 @@ import { audioRoute } from "./routes/audio";
 import { authRoute } from "./routes/auth";
 import { chatRoute } from "./routes/chat";
 import { dailyRoute } from "./routes/daily";
+import { eventsRoute } from "./routes/events";
 import { healthRoute } from "./routes/health";
 import { profileRoute } from "./routes/profile";
 import { quizRoute } from "./routes/quiz";
@@ -28,8 +29,9 @@ v1.route("/srs", srsRoute); // authenticate middleware applied inside srsRoute
 v1.route("/daily", dailyRoute); // authenticate middleware applied inside dailyRoute
 v1.route("/quiz", quizRoute); // authenticate middleware applied inside quizRoute
 v1.route("/vision", visionRoute); // authenticate middleware applied inside visionRoute
+v1.route("/events", eventsRoute); // authenticate middleware applied inside eventsRoute
 
-// scenarios, events routes land in later milestones per CLAUDE.md build order.
+// scenarios land in a later milestone per CLAUDE.md build order.
 
 app.route("/v1", v1);
 

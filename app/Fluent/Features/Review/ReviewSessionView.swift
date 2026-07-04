@@ -23,6 +23,9 @@ struct ReviewSessionView: View {
                     summaryView
                 } else if let card = viewModel.currentCard {
                     progressBar
+                    if viewModel.isOffline {
+                        offlineHint
+                    }
                     Spacer()
                     WordCardView(word: card.word)
                         .padding(.horizontal, Theme.Spacing.lg)
@@ -52,6 +55,12 @@ struct ReviewSessionView: View {
         ProgressView(value: viewModel.progress)
             .tint(Theme.Colors.accent)
             .padding(.horizontal, Theme.Spacing.xl)
+    }
+
+    private var offlineHint: some View {
+        Text("Offline — reviewing cached words, will sync later")
+            .font(Theme.Font.caption())
+            .foregroundStyle(Theme.Colors.inkSoft)
     }
 
     private var ratingButtons: some View {
