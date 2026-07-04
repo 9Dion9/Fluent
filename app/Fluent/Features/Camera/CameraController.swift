@@ -66,16 +66,7 @@ final class CameraController: NSObject {
     /// response could fire the delegate while `photoContinuation` was still nil,
     /// silently dropping the result and leaving the `await` hung forever.
     func capturePhoto() async -> UIImage? {
-        // Without this, AVCapturePhotoOutput's connection defaults to landscape
-        // framing — every still comes back rotated 90° from what the viewfinder
-        // showed. A sideways/upside-down photo is a plausible reason a VLM
-        // misidentifies an otherwise-recognizable object (CLAUDE.md §9 assumes
-        // portrait-held capture throughout).
-        if let connection = photoOutput.connection(with: .video), connection.isVideoRotationAngleSupported(90) {
-            connection.videoRotationAngle = 90
-        }
-
-        return await withCheckedContinuation { continuation in
+        await withCheckedContinuation { continuation in
             photoContinuation = continuation
             let settings = AVCapturePhotoSettings()
             photoOutput.capturePhoto(with: settings, delegate: self)
@@ -109,13 +100,28 @@ final class CameraController: NSObject {
         if session.canAddInput(input) { session.addInput(input) }
         if session.canAddOutput(photoOutput) { session.addOutput(photoOutput) }
         session.commitConfiguration()
+
+        // Set once, here, not per-capture: re-setting videoRotationAngle on an
+        // already-active connection right before each capturePhoto() call was
+        // the likely cause of every shot after the first coming back as a
+        // frozen repeat of the first frame — repeatedly nudging the
+        // connection's rotation appears to disrupt the sensor pipeline from
+        // ever latching a fresh buffer for subsequent requests. Without this,
+        // AVCapturePhotoOutput's connection also defaults to landscape framing
+        // (every still rotated 90° from the portrait viewfinder), which was a
+        // second, separate reason a VLM could misidentify an object.
+        if let connection = photoOutput.connection(with: .video), connection.isVideoRotationAngleSupported(90) {
+            connection.videoRotationAngle = 90
+        }
         return true
     }
 }
 
 extension CameraController: @preconcurrency AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        let image = photo.fileDataRepresentation().flatMap { UIImage(data: $0) }
+        // An errored capture's `photo` can carry stale/unusable sensor data —
+        // treat it as a failed shot rather than risk resolving with it.
+        let image = error == nil ? photo.fileDataRepresentation().flatMap { UIImage(data: $0) } : nil
         Task { @MainActor in
             photoContinuation?.resume(returning: image)
             photoContinuation = nil
